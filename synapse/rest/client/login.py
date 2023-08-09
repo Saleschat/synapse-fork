@@ -54,6 +54,8 @@ from synapse.http.site import RequestInfo, SynapseRequest
 from synapse.rest.client._base import client_patterns
 from synapse.rest.well_known import WellKnownBuilder
 from synapse.types import JsonDict, UserID
+from synapse.handlers.sso import UserAttributes
+
 
 if TYPE_CHECKING:
     from synapse.server import HomeServer
@@ -364,6 +366,7 @@ class LoginRestServlet(RestServlet):
         should_check_deactivated: bool = True,
         *,
         request_info: RequestInfo,
+        user_attributes: Optional[UserAttributes] = None,
     ) -> LoginResponse:
         """Called when we've successfully authed the user and now need to
         actually login them in (e.g. create devices). This gets called on
@@ -403,8 +406,14 @@ class LoginRestServlet(RestServlet):
         if create_non_existent_users:
             canonical_uid = await self.auth_handler.check_user_exists(user_id)
             if not canonical_uid:
+                default_display_name = (
+                    user_attributes.display_name
+                    if user_attributes is not None
+                    else None
+                )
                 canonical_uid = await self.registration_handler.register_user(
-                    localpart=UserID.from_string(user_id).localpart
+                    localpart=UserID.from_string(user_id).localpart,
+                    default_display_name=default_display_name,
                 )
             user_id = canonical_uid
 
@@ -534,12 +543,18 @@ class LoginRestServlet(RestServlet):
             The body of the JSON response.
         """
         user_id = self.hs.get_jwt_handler().validate_login(login_submission)
+        user_attributes = (
+            await self.hs.get_jwt_handler().get_user_attributes_from_token(
+                login_submission
+            )
+        )
         return await self._complete_login(
             user_id,
             login_submission,
             create_non_existent_users=True,
             should_issue_refresh_token=should_issue_refresh_token,
             request_info=request_info,
+            user_attributes=user_attributes,
         )
 
 

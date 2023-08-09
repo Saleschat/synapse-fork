@@ -820,3 +820,18 @@ class PartialStateConflictError(SynapseError):
             msg=PartialStateConflictError.message(),
             errcode=Codes.UNKNOWN,
         )
+
+
+class JWTDecodeFailed(SynapseError):
+    def __init__(
+        self,
+        msg: str,
+    ):
+        """
+        An error raised when an attempt to parse claims in a JWT token fails
+
+        Args:
+            msg: The human-readable error message.
+        """
+
+        super().__init__(500, msg)

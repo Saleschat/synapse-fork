@@ -18,6 +18,10 @@ from synapse.types import JsonDict
 from synapse.util.check_dependencies import check_requirements
 
 from ._base import Config
+from synapse.util.module_loader import load_module
+
+
+DEFAULT_USER_MAPPING_PROVIDER = "synapse.handlers.oidc.JinjaOidcMappingProvider"
 
 
 class JWTConfig(Config):
@@ -36,6 +40,32 @@ class JWTConfig(Config):
             # that the claims exist on the JWT.
             self.jwt_issuer = jwt_config.get("issuer")
             self.jwt_audiences = jwt_config.get("audiences")
+
+            user_mapping_provider = jwt_config.get("user_mapping_provider", {})
+            if user_mapping_provider is not None:
+                config = user_mapping_provider.get("config")
+                if config is not None:
+                    user_mapping_provider.setdefault(
+                        "module", DEFAULT_USER_MAPPING_PROVIDER
+                    )
+
+                    (
+                        user_mapping_provider_class,
+                        user_mapping_provider_config,
+                    ) = load_module(
+                        user_mapping_provider,
+                        (
+                            "jwt_config",
+                            "user_mapping_provider",
+                        ),
+                    )
+
+                    self.jwt_user_mapping_provider = user_mapping_provider_class(
+                        user_mapping_provider_config
+                    )
+                else:
+                    self.jwt_user_mapping_provider = None
+
             check_requirements("jwt")
         else:
             self.jwt_enabled = False
@@ -44,3 +74,4 @@ class JWTConfig(Config):
             self.jwt_subject_claim = None
             self.jwt_issuer = None
             self.jwt_audiences = None
+            self.jwt_user_mapping_provider = None

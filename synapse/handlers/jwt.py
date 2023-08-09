@@ -16,8 +16,11 @@ from typing import TYPE_CHECKING
 from authlib.jose import JsonWebToken, JWTClaims
 from authlib.jose.errors import BadSignatureError, InvalidClaimError, JoseError
 
-from synapse.api.errors import Codes, LoginError
+from synapse.api.errors import Codes, LoginError, JWTDecodeFailed
 from synapse.types import JsonDict, UserID
+
+from authlib.oidc.core import UserInfo
+from synapse.handlers.sso import UserAttributes
 
 if TYPE_CHECKING:
     from synapse.server import HomeServer
@@ -32,6 +35,26 @@ class JwtHandler:
         self.jwt_algorithm = hs.config.jwt.jwt_algorithm
         self.jwt_issuer = hs.config.jwt.jwt_issuer
         self.jwt_audiences = hs.config.jwt.jwt_audiences
+        self.jwt_user_mapping_provider = hs.config.jwt.jwt_user_mapping_provider
+
+    def _get_claims_from_token(self, token) -> JWTClaims:
+        jwt = JsonWebToken([self.jwt_algorithm])
+
+        claim_options = {}
+
+        if self.jwt_issuer is not None:
+            claim_options["iss"] = {"value": self.jwt_issuer, "essential": True}
+        if self.jwt_audiences is not None:
+            claim_options["aud"] = {"values": self.jwt_audiences, "essential": True}
+
+        claims = jwt.decode(
+            token,
+            key=self.jwt_secret,
+            claims_cls=JWTClaims,
+            claims_options=claim_options,
+        )
+
+        return claims
 
     def validate_login(self, login_submission: JsonDict) -> str:
         """
@@ -61,17 +84,12 @@ class JwtHandler:
             claim_options["aud"] = {"values": self.jwt_audiences, "essential": True}
 
         try:
-            claims = jwt.decode(
-                token,
-                key=self.jwt_secret,
-                claims_cls=JWTClaims,
-                claims_options=claim_options,
-            )
+            claims = self._get_claims_from_token(token)
         except BadSignatureError:
             # We handle this case separately to provide a better error message
             raise LoginError(
                 403,
-                "JWT validation failed: Signature verification failed",
+                "JWT decode failed: Signature verification failed",
                 errcode=Codes.FORBIDDEN,
             )
         except JoseError as e:
@@ -103,3 +121,43 @@ class JwtHandler:
             raise LoginError(403, "Invalid JWT", errcode=Codes.FORBIDDEN)
 
         return UserID(user, self.hs.hostname).to_string()
+
+    async def get_user_attributes_from_token(
+        self, login_submission: JsonDict
+    ) -> UserAttributes:
+        """
+        Parses the user attributes that are set in the claims of a jwt token
+
+        Args:
+            login_submission: the whole of the login submission
+                (including 'type' and other relevant fields)
+
+        Returns:
+            The user attributes set into token claims.
+
+        Raises:
+            JWTDecodeFailed
+        """
+
+        # return empty user attributes jwt_user_mapping_provider is None
+        # This makes sure that no exception is raised
+        if self.jwt_user_mapping_provider is None:
+            return None
+
+        token = login_submission.get("token")
+
+        try:
+            claims = self._get_claims_from_token(token)
+
+        except JoseError as e:
+            # A JWT error occurred, return some info back to the client.
+            raise JWTDecodeFailed(
+                "JWT decode failed: %s" % (str(e),),
+            )
+
+        userinfo = UserInfo(claims)
+        attributes = await self.jwt_user_mapping_provider.map_user_attributes(
+            userinfo, token, 0
+        )
+
+        return UserAttributes(**attributes)
