@@ -354,10 +354,19 @@ class RoomSendEventRestServlet(TransactionRestServlet):
             "sender": requester.user.to_string(),
         }
 
-        if requester.app_service:
-            origin_server_ts = parse_integer(request, "ts")
-            if origin_server_ts is not None:
-                event_dict["origin_server_ts"] = origin_server_ts
+       
+        # The following if condition is commented to make sure that the timestamps 
+        # are correct when the messages are stored in the database
+        # if the `if` condition is not commented, then the timestamps for the person using this
+        # server will be the timestamp of the time when the messages were synced for a particular room 
+        # and not the original timestamp of the messages
+        # NOTE: don't remove the if condition, let it be for future readers
+        
+        # if requester.app_service:
+        origin_server_ts = parse_integer(request, "ts")
+        logger.info(origin_server_ts)
+        if origin_server_ts is not None:
+            event_dict["origin_server_ts"] = origin_server_ts
 
         try:
             (
