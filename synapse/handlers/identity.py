@@ -807,7 +807,7 @@ class IdentityHandler:
             )
 
             if "same_org" not in lookup_result:
-                logger.warning("No result from same org constraint lookup")
+                logger.warning("same_org key not found in lookup_result for same org constraint call to identity server")
                 raise SynapseError(500, "Identity server returned an empty response")
             
             return lookup_result["same_org"]

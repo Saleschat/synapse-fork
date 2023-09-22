@@ -35,7 +35,7 @@ from synapse.api.errors import (
     ShadowBanError,
     SynapseError,
     UnredactedContentDeletedError,
-    NoIdentifiationForInviteeError
+    NoIdentificationForInviteeError
 )
 from synapse.api.filtering import Filter
 from synapse.events.utils import SerializeEventConfig, format_event_for_client_v2
@@ -1020,7 +1020,7 @@ class RoomMembershipRestServlet(TransactionRestServlet):
         if membership_action == "invite" and not requester.app_service:
 
             invitee = None
-            if "user_id" in content["user_id"]:
+            if "user_id" in content:
                 invitee = UserID.from_string(content["user_id"])
 
             try: 
@@ -1038,10 +1038,10 @@ class RoomMembershipRestServlet(TransactionRestServlet):
                         Codes.FORBIDDEN
                     )
 
-            except NoIdentifiationForInviteeError as e:
+            except NoIdentificationForInviteeError:
                 raise SynapseError(
                     HTTPStatus.BAD_REQUEST,
-                    "Either `mxid` or `medium & address` is required for the user",
+                    "Either `mxid` or `medium & address` is required for the invitee",
                     Codes.MISSING_PARAM
                 )
 

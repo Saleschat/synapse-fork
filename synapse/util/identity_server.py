@@ -36,9 +36,9 @@ class IdentityServer:
         if token is not None:
             self.cache.set(user_id, token)
 
-        return token
-        
+        logger.error("Identity server didn't return any token for user %s", user_id)
 
+        return token
 
     async def _get_token_from_server(self, user_id: str) -> Optional[str]:
         """
@@ -47,6 +47,10 @@ class IdentityServer:
         EXPIRES_MS = 3600 * 1000
         identity_server_host = self.hs.config.identity_server.identity_server_host
         access_token = random_string(24)
+
+        if identity_server_host is None:
+            logger.error("identity_server_host value not found")
+            return None
 
         try:
             lookup_result = await self.http_client.post_json_get_json(
