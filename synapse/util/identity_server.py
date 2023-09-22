@@ -29,7 +29,7 @@ class IdentityServer:
 
         if token is not None:
             return token
-        
+
         # the token is not there so get the token from the identity server
         token = await self._get_token_from_server(user_id)
 
@@ -67,11 +67,11 @@ class IdentityServer:
             logger.error("Request timed out: Failed to contact identity server to generate token for user %s", user_id)
             return None
         except Exception as e:
-            logger.error("An error occured while contacting the identity server: %s", e)
+            logger.error("An error occurred while contacting the identity server: %s", e)
             return None
-        
+
         if "token" not in lookup_result:
             return lookup_result["token"]
-        
+
         return None
 
