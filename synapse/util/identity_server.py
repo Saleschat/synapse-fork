@@ -35,6 +35,7 @@ class IdentityServer:
 
         if token is not None:
             self.cache.set(user_id, token)
+            return token
 
         logger.error("Identity server didn't return any token for user %s", user_id)
 
@@ -77,7 +78,7 @@ class IdentityServer:
             logger.error("An error occurred while contacting the identity server: %s", e)
             return None
 
-        if "token" not in lookup_result:
+        if "token" in lookup_result:
             return lookup_result["token"]
 
         return None
