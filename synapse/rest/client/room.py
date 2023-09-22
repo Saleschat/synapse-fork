@@ -1017,7 +1017,7 @@ class RoomMembershipRestServlet(TransactionRestServlet):
         content = parse_json_object_from_request(request, allow_empty_body=True)
 
         # we're allowing app service users and various bots to not have the same org constraint
-        if membership_action == "invite"  and not requester.app_service:
+        if membership_action == "invite" and not requester.app_service:
 
             invitee = None
             if "user_id" in content["user_id"]:
@@ -1027,8 +1027,8 @@ class RoomMembershipRestServlet(TransactionRestServlet):
                 in_same_org = await self.room_member_handler.verfiy_invitee_in_same_org(
                     requester.user,
                     invitee_user=invitee,
-                    medium=content["medium"],
-                    address=content["address"]
+                    medium=(content["medium"] if "medium" in content else None),
+                    address=(content["address"] if "address" in content else None)
                 )
 
                 if not in_same_org:
