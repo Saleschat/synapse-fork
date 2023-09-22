@@ -835,3 +835,10 @@ class JWTDecodeFailed(SynapseError):
         """
 
         super().__init__(500, msg)
+
+class NoIdentifiationForInviteeError(Exception):
+    """Raised when there is no mxid for the inivitee
+    as well as no medium and address that can identiy the user
+    being invited
+    """
+

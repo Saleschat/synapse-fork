@@ -142,6 +142,7 @@ from synapse.util.distributor import Distributor
 from synapse.util.macaroons import MacaroonGenerator
 from synapse.util.ratelimitutils import FederationRateLimiter
 from synapse.util.stringutils import random_string
+from synapse.util.identity_server import IdentityServer
 
 logger = logging.getLogger(__name__)
 
@@ -917,3 +918,7 @@ class HomeServer(metaclass=abc.ABCMeta):
     @cache_in_self
     def get_worker_locks_handler(self) -> WorkerLocksHandler:
         return WorkerLocksHandler(self)
+    
+    @cache_in_self
+    def get_identity_server_helper(self) -> IdentityServer:
+        return IdentityServer(self)

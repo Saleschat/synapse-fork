@@ -14,7 +14,7 @@ _trial_temp*/
 /out
 .DS_Store
 __pycache__/
-
+venv
 # We do want poetry, cargo and flake lockfiles.
 !poetry.lock
 !Cargo.lock

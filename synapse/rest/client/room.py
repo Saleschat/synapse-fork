@@ -35,6 +35,7 @@ from synapse.api.errors import (
     ShadowBanError,
     SynapseError,
     UnredactedContentDeletedError,
+    NoIdentifiationForInviteeError
 )
 from synapse.api.filtering import Filter
 from synapse.events.utils import SerializeEventConfig, format_event_for_client_v2
@@ -1014,6 +1015,35 @@ class RoomMembershipRestServlet(TransactionRestServlet):
             raise AuthError(403, "Guest access not allowed")
 
         content = parse_json_object_from_request(request, allow_empty_body=True)
+
+        # we're allowing app service users and various bots to not have the same org constraint
+        if membership_action == "invite"  and not requester.app_service:
+
+            invitee = None
+            if "user_id" in content["user_id"]:
+                invitee = UserID.from_string(content["user_id"])
+
+            try: 
+                in_same_org = await self.room_member_handler.verfiy_invitee_in_same_org(
+                    requester.user,
+                    invitee_user=invitee,
+                    medium=content["medium"],
+                    address=content["address"]
+                )
+
+                if not in_same_org:
+                    raise SynapseError(
+                        HTTPStatus.FORBIDDEN,
+                        "Only users from the same org can be invited",
+                        Codes.FORBIDDEN
+                    )
+
+            except NoIdentifiationForInviteeError as e:
+                raise SynapseError(
+                    HTTPStatus.BAD_REQUEST,
+                    "Either `mxid` or `medium & address` is required for the user",
+                    Codes.MISSING_PARAM
+                )
 
         if membership_action == "invite" and all(
             key in content for key in ("medium", "address")

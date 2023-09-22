@@ -53,6 +53,7 @@ from .tracer import TracerConfig
 from .user_directory import UserDirectoryConfig
 from .voip import VoipConfig
 from .workers import WorkerConfig
+from .identity_server import IdentityServerConfig
 
 
 class HomeServerConfig(RootConfig):
@@ -98,4 +99,5 @@ class HomeServerConfig(RootConfig):
         RedisConfig,
         ExperimentalConfig,
         BackgroundUpdateConfig,
+        IdentityServerConfig
     ]

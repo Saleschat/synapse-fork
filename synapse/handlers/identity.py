@@ -26,7 +26,7 @@ from synapse.api.errors import (
     SynapseError,
 )
 from synapse.api.ratelimiting import Ratelimiter
-from synapse.http import RequestTimedOutError
+from synapse.http import RequestTimedOutError, SynapseError
 from synapse.http.client import SimpleHttpClient
 from synapse.http.site import SynapseRequest
 from synapse.types import JsonDict, Requester
@@ -37,6 +37,7 @@ from synapse.util.stringutils import (
     random_string,
     valid_id_server_location,
 )
+from synapse.util.identity_server import IdentityServer
 
 if TYPE_CHECKING:
     from synapse.server import HomeServer
@@ -773,6 +774,51 @@ class IdentityHandler:
         display_name = data["display_name"]
         return token, public_keys, fallback_public_key, display_name
 
+    async def have_same_org(
+        self, 
+        user: str, 
+        other:Optional[str] = "", 
+        medium: Optional[str] = "", 
+        address: Optional[str] = ""
+    ) -> bool:
+        
+        id_access_token = await self.hs.get_identity_server_helper().get_token_for_user(user)
+
+        if id_access_token is None:
+            raise SynapseError(500, "Unknown error while getting identity server access token")
+
+        headers = {"Authorization": create_id_access_token_header(id_access_token)}
+        id_server = self.hs.config.identity_server.identity_server_host
+
+        if id_server is None:
+            logger.error("Identity server is not set")
+            raise SynapseError(500, "Identity server host is not known")
+
+        try:
+            lookup_result = await self._http_client.post_json_get_json(
+                "%s%s/_matrix/identity/v2/identities/verify-org" % (id_server_scheme, id_server),
+                {
+                    "user": user,
+                    "other": other,
+                    "medium": medium,
+                    "address": address,
+                },
+                headers=headers,
+            )
+
+            if "same_org" not in lookup_result:
+                logger.warning("No result from same org constraint lookup")
+                raise SynapseError(500, "Identity server returned an empty response")
+            
+            return lookup_result["same_org"]
+            
+        except Exception as e:
+            logger.warning("Error when performing a v2 same org constraint lookup: %s", e)
+            raise SynapseError(
+                500, "Unknown error occurred during identity server lookup"
+            )
+        
+        
 
 def create_id_access_token_header(id_access_token: str) -> List[str]:
     """Create an Authorization header for passing to SimpleHttpClient as the header value

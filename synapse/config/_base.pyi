@@ -60,6 +60,7 @@ from synapse.config import (  # noqa: F401
     user_directory,
     voip,
     workers,
+    identity_server
 )
 from synapse.types import StrSequence
 
@@ -120,6 +121,7 @@ class RootConfig:
     federation: federation.FederationConfig
     retention: retention.RetentionConfig
     background_updates: background_updates.BackgroundUpdateConfig
+    identity_server: identity_server.IdentityServerConfig
 
     config_classes: List[Type["Config"]] = ...
     config_files: List[str]

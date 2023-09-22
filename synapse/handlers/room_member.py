@@ -32,6 +32,7 @@ from synapse.api.errors import (
     PartialStateConflictError,
     ShadowBanError,
     SynapseError,
+    NoIdentifiationForInviteeError
 )
 from synapse.api.ratelimiting import Ratelimiter
 from synapse.event_auth import get_named_level, get_power_level_event
@@ -1726,6 +1727,28 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
 
         return False
 
+    async def verfiy_invitee_in_same_org(
+        self, 
+        user: UserID, 
+        invitee_user:Optional[UserID], 
+        medium: Optional[str], 
+        address: Optional[str]
+    ) -> bool:
+        """Check if `mxid` or `medium and address` for the invitee is present.
+        If present then calls have_same_org function in the identity handler
+        """
+
+        if invitee_user is None and (medium is None and address is None):
+            raise NoIdentifiationForInviteeError()
+
+        invitee_str = invitee_user.to_string() if invitee_user is not None else None
+
+        return self.identity_handler.have_same_org(
+            user.to_string(), 
+            invitee_str,
+            medium, 
+            address
+        )
 
 class RoomMemberMasterHandler(RoomMemberHandler):
     def __init__(self, hs: "HomeServer"):
