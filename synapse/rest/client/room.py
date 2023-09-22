@@ -1013,13 +1013,12 @@ class RoomMembershipRestServlet(TransactionRestServlet):
             Membership.LEAVE,
         }:
             raise AuthError(403, "Guest access not allowed")
-
         content = parse_json_object_from_request(request, allow_empty_body=True)
 
         # we're allowing app service users and various bots to not have the same org constraint
         if membership_action == "invite" and not requester.app_service:
 
-            invitee = None
+            invitee: Optional[UserID] = None
             if "user_id" in content:
                 invitee = UserID.from_string(content["user_id"])
 

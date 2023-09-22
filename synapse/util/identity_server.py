@@ -48,13 +48,20 @@ class IdentityServer:
         identity_server_host = self.hs.config.identity_server.identity_server_host
         access_token = random_string(24)
 
+        # copied from synapse.rest.client.openid IdTokenServlet function
+        # this code adds the token to the database with a expiry so that when the
+        # identity server calls the homeserver's API to get the user_id, the homeserver
+        # can figure out for which user the token is for
+        ts_valid_until_ms = self.hs.get_clock().time_msec() + EXPIRES_MS
+        await self.store.insert_open_id_token(access_token, ts_valid_until_ms, user_id)
+
         if identity_server_host is None:
             logger.error("identity_server_host value not found")
             return None
 
         try:
             lookup_result = await self.http_client.post_json_get_json(
-                "https://%s/_matrix/identity/v2/account/register" % (identity_server_host),
+                    "https://%s/_matrix/identity/v2/account/register" % (identity_server_host),
                 {
                     "access_token": access_token,
                     "token_type": "Bearer",
