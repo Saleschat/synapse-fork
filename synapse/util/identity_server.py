@@ -16,7 +16,10 @@ class IdentityServer:
     """
 
     def __init__(self, hs: "HomeServer") -> None:
-        self.cache: LruCache[str, str] = LruCache(cache_name= "identity_server_tokens", max_size=200)
+        self.cache: LruCache[str, str] = LruCache(
+            cache_name="identity_server_tokens",
+            max_size=200
+        )
         self.hs = hs
         self.http_client = SimpleHttpClient(hs)
         self.store = hs.get_datastores().main
@@ -28,6 +31,10 @@ class IdentityServer:
         token = self.cache.get(user_id)
 
         if token is not None:
+            logger.info(
+                "Cache hit for identity server access token for user %s",
+                user_id
+            )
             return token
 
         # the token is not there so get the token from the identity server
@@ -37,7 +44,10 @@ class IdentityServer:
             self.cache.set(user_id, token)
             return token
 
-        logger.error("Identity server didn't return any token for user %s", user_id)
+        logger.error(
+            "Identity server didn't return any token for user %s",
+            user_id
+        )
 
         return token
 

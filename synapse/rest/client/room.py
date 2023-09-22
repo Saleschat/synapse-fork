@@ -1018,31 +1018,22 @@ class RoomMembershipRestServlet(TransactionRestServlet):
         # we're allowing app service users and various bots to not have the same org constraint
         if membership_action == "invite" and not requester.app_service:
 
+            # TODO: handle the join case as well in second iteration
+
             invitee: Optional[UserID] = None
             if "user_id" in content:
-                invitee = UserID.from_string(content["user_id"])
+                try:
+                    invitee = UserID.from_string(content["user_id"])
+                    parse_and_validate_server_name(invitee.domain)
+                except Exception:
+                    raise SynapseError(400, "Invalid user_id: %s" % (invitee,))
 
-            try: 
-                in_same_org = await self.room_member_handler.verfiy_invitee_in_same_org(
-                    requester.user,
-                    invitee_user=invitee,
-                    medium=(content["medium"] if "medium" in content else None),
-                    address=(content["address"] if "address" in content else None)
-                )
-
-                if not in_same_org:
-                    raise SynapseError(
-                        HTTPStatus.FORBIDDEN,
-                        "Only users from the same org can be invited",
-                        Codes.FORBIDDEN
-                    )
-
-            except NoIdentificationForInviteeError:
-                raise SynapseError(
-                    HTTPStatus.BAD_REQUEST,
-                    "Either `mxid` or `medium & address` is required for the invitee",
-                    Codes.MISSING_PARAM
-                )
+            await self.room_member_handler.verfiy_invitee_in_same_org(
+                requester.user,
+                invitee_user=invitee,
+                medium=(content["medium"] if "medium" in content else None),
+                address=(content["address"] if "address" in content else None)
+            )
 
         if membership_action == "invite" and all(
             key in content for key in ("medium", "address")

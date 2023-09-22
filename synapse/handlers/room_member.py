@@ -1730,25 +1730,36 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
     async def verfiy_invitee_in_same_org(
         self, 
         user: UserID, 
-        invitee_user:Optional[UserID], 
-        medium: Optional[str], 
-        address: Optional[str]
-    ) -> bool:
+        invitee_user:Optional[UserID] = None,
+        medium: Optional[str] = None,
+        address: Optional[str] = None
+    ) -> None:
         """Check if `mxid` or `medium and address` for the invitee is present.
         If present then it calls have_same_org function in the identity handler
         """
 
         if invitee_user is None and (medium is None and address is None):
-            raise NoIdentificationForInviteeError()
+            raise SynapseError(
+                HTTPStatus.BAD_REQUEST,
+                "Either `mxid` or `medium & address` is required for the invitee",
+                Codes.MISSING_PARAM
+            )
 
         invitee_str = invitee_user.to_string() if invitee_user is not None else None
 
-        return await self.identity_handler.have_same_org(
+        in_same_org =  await self.identity_handler.have_same_org(
             user.to_string(), 
             invitee_str,
             medium, 
             address
         )
+
+        if not in_same_org:
+            raise SynapseError(
+                HTTPStatus.FORBIDDEN,
+                "Only users from the same org can be invited",
+                Codes.FORBIDDEN
+            )
 
 class RoomMemberMasterHandler(RoomMemberHandler):
     def __init__(self, hs: "HomeServer"):

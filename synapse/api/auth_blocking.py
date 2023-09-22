@@ -74,6 +74,8 @@ class AuthBlocking:
                 "Passed in both 'user_id' and 'requester' to 'check_auth_blocking'"
             )
 
+
+
         if requester:
             if requester.authenticated_entity.startswith("@"):
                 user_id = requester.authenticated_entity

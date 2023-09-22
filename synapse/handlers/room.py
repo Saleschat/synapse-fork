@@ -729,6 +729,47 @@ class RoomCreationHandler:
                 if server is blocked to some resource being
                 exceeded
         """
+
+        invite_3pid_list = config.get("invite_3pid", [])
+        invite_list = config.get("invite", [])
+
+        # if any of the invitee is not in the org, the invite createRoom request
+        # will be rejected
+
+        for invitee in invite_list:
+            invitee_user: UserID
+            try:
+                invitee_user = UserID.from_string(invitee)
+                parse_and_validate_server_name(invitee_user.domain)
+            except Exception:
+                raise SynapseError(400, "Invalid user_id: %s" % (invitee,))
+
+            if not requester.app_service:
+                await self.room_member_handler.verfiy_invitee_in_same_org(
+                    requester.user,
+                    invitee_user=invitee_user
+                )
+
+        # validate each entry for correctness
+        for invite_3pid in invite_3pid_list:
+            if not all(
+                key in invite_3pid
+                for key in ("medium", "address", "id_server", "id_access_token")
+            ):
+                raise SynapseError(
+                    HTTPStatus.BAD_REQUEST,
+                    "all of `medium`, `address`, `id_server` and `id_access_token` "
+                    "are required when making a 3pid invite",
+                    Codes.MISSING_PARAM,
+                )
+
+            if not requester.app_service:
+                await self.room_member_handler.verfiy_invitee_in_same_org(
+                    requester.user,
+                    medium=invite_3pid["medium"],
+                    address=invite_3pid["address"]
+                )
+
         user_id = requester.user.to_string()
 
         await self.auth_blocking.check_auth_blocking(requester=requester)
@@ -747,22 +788,6 @@ class RoomCreationHandler:
         await self._third_party_event_rules.on_create_room(
             requester, config, is_requester_admin=is_requester_admin
         )
-
-        invite_3pid_list = config.get("invite_3pid", [])
-        invite_list = config.get("invite", [])
-
-        # validate each entry for correctness
-        for invite_3pid in invite_3pid_list:
-            if not all(
-                key in invite_3pid
-                for key in ("medium", "address", "id_server", "id_access_token")
-            ):
-                raise SynapseError(
-                    HTTPStatus.BAD_REQUEST,
-                    "all of `medium`, `address`, `id_server` and `id_access_token` "
-                    "are required when making a 3pid invite",
-                    Codes.MISSING_PARAM,
-                )
 
         if not is_requester_admin:
             spam_check = await self._spam_checker_module_callbacks.user_may_create_room(
@@ -825,12 +850,6 @@ class RoomCreationHandler:
             if mapping:
                 raise SynapseError(400, "Room alias already taken", Codes.ROOM_IN_USE)
 
-        for i in invite_list:
-            try:
-                uid = UserID.from_string(i)
-                parse_and_validate_server_name(uid.domain)
-            except Exception:
-                raise SynapseError(400, "Invalid user_id: %s" % (i,))
 
         if (invite_list or invite_3pid_list) and requester.shadow_banned:
             # We randomly sleep a bit just to annoy the requester.
