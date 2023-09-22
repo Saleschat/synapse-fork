@@ -1743,7 +1743,7 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
 
         invitee_str = invitee_user.to_string() if invitee_user is not None else None
 
-        return self.identity_handler.have_same_org(
+        return await self.identity_handler.have_same_org(
             user.to_string(), 
             invitee_str,
             medium, 
