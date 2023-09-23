@@ -30,6 +30,8 @@ class IdentityServer:
 
         token = self.cache.get(user_id)
 
+        logger.info("this is the token for the user %s", token)
+
         if token is not None:
             logger.info(
                 "Cache hit for identity server access token for user %s",
