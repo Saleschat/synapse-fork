@@ -38,18 +38,18 @@ class IdentityServer:
             return token
 
         # the token is not there so get the token from the identity server
-        token = await self._get_token_from_server(user_id)
+        token_from_server = await self._get_token_from_server(user_id)
 
-        if token is not None:
-            self.cache.set(user_id, token)
-            return token
+        if token_from_server is not None:
+            self.cache.set(user_id, token_from_server)
+            return token_from_server
 
         logger.error(
             "Identity server didn't return any token for user %s",
             user_id
         )
 
-        return token
+        return None
 
     async def _get_token_from_server(self, user_id: str) -> Optional[str]:
         """
