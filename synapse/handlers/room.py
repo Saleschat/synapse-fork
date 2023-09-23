@@ -750,7 +750,7 @@ class RoomCreationHandler:
 
             # if the requester is appservice or the invitee is a user created by the app service
             # then we can let them bypass the same org constraint
-            if not (requester.app_service.id or is_app_service_user):
+            if not (requester.app_service or is_app_service_user):
                 await self.room_member_handler.verfiy_invitee_in_same_org(
                     requester.user,
                     invitee_user=invitee_user
