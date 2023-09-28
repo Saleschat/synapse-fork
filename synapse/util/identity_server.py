@@ -74,7 +74,7 @@ class IdentityServer:
 
         try:
             lookup_result = await self.http_client.post_json_get_json(
-                    "https://%s/_matrix/identity/v2/account/register" % (identity_server_host),
+                    "%s/_matrix/identity/v2/account/register" % (identity_server_host),
                 {
                     "access_token": access_token,
                     "token_type": "Bearer",

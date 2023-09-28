@@ -8,6 +8,7 @@ from synapse.http.server import HttpServer
 from synapse.api.errors import SynapseError
 from synapse.http.client import SimpleHttpClient
 from synapse.http import RequestTimedOutError
+from synapse.api.errors import  Codes
 
 if TYPE_CHECKING:
     from synapse.server import HomeServer
@@ -42,7 +43,7 @@ class ThreepidRestServlet(RestServlet):
         if added:
             return 204, {}
 
-        raise SynapseError(500, "Failed to add threepid(s)")
+        raise SynapseError(403, "Failed to add threepid(s)", Codes.FORBIDDEN)
 
 
 def register_servlets(hs: "HomeServer", http_server: HttpServer) -> None:

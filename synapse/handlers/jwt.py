@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from authlib.jose import JsonWebToken, JWTClaims
 from authlib.jose.errors import BadSignatureError, InvalidClaimError, JoseError
@@ -21,6 +21,7 @@ from synapse.types import JsonDict, UserID
 
 from authlib.oidc.core import UserInfo
 from synapse.handlers.sso import UserAttributes
+from synapse.handlers.identity import  ThreePid
 
 if TYPE_CHECKING:
     from synapse.server import HomeServer
@@ -161,3 +162,27 @@ class JwtHandler:
         )
 
         return UserAttributes(**attributes)
+
+    def get_threepids_from_token(self, token) -> List[ThreePid]:
+        try:
+            claims = self._get_claims_from_token(token)
+
+        except JoseError as e:
+            # A JWT error occurred, return some info back to the client.
+            raise JWTDecodeFailed(
+                "JWT decode failed: %s" % (str(e),),
+            )
+
+        threepids: List[ThreePid] = []
+
+        for key in ["first_name", "last_name", "email"]:
+            if key in claims:
+                threepids.append({"key": key, "value": claims[key]})
+
+        if "org_id_to_org_member_info" in claims:
+            keys = list(claims["org_id_to_org_member_info"].keys())
+            if len(keys) > 0:
+                org_id = claims["org_id_to_org_member_info"][keys[0]]["org_id"]
+                threepids.append({"key": "org_id", "value": org_id})
+
+        return threepids

@@ -870,12 +870,22 @@ class IdentityHandler:
     async def add_threepid(
         self,
         mxid: str,
-        org_id: str,
         threepids: List[ThreePid]
     ) -> bool:
         """
         Returns a bool to indicate whether the threepid has been added or failed
         """
+        org_id = None
+
+        for threepid in threepids:
+            if threepid["key"] == "org_id":
+                org_id = threepid["value"]
+
+        if org_id is None:
+            raise SynapseError(
+                500,
+                "Cannot add threepids as `org_id` is not found"
+            )
 
         id_access_token = await self.hs.get_identity_server_helper().get_token_for_user(
             mxid)

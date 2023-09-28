@@ -138,10 +138,6 @@ class UserAttributes:
     # if `None`, the mapper has not picked a userid, and the user should be prompted to
     # enter one.
     localpart: Optional[str]
-    email: Optional[str] = None
-    first_name: Optional[str]= None
-    last_name: Optional[str] = None
-    org_id: Optional[str] = None
     confirm_localpart: bool = False
     display_name: Optional[str] = None
     picture: Optional[str] = None

@@ -367,6 +367,7 @@ class LoginRestServlet(RestServlet):
         *,
         request_info: RequestInfo,
         user_attributes: Optional[UserAttributes] = None,
+        threepids: Optional[List[ThreePid]] = None
     ) -> LoginResponse:
         """Called when we've successfully authed the user and now need to
         actually login them in (e.g. create devices). This gets called on
@@ -417,45 +418,34 @@ class LoginRestServlet(RestServlet):
                     default_display_name=default_display_name,
                 )
 
-                mxid = canonical_uid
-                org_id = user_attributes.org_id
-                threepids: List[ThreePid] = []
+                if threepids is not None:
+                    mxid = canonical_uid
+                    threepids_added = False
 
-                if user_attributes.first_name is not None:
-                    threepids.append({"key": "first_name", "value": user_attributes.first_name})
-
-                if user_attributes.last_name is not None:
-                    threepids.append(
-                        {"key": "last_name", "value": user_attributes.last_name})
-
-                if user_attributes.org_id is not None:
-                    threepids.append(
-                        {"key": "org_id", "value": user_attributes.org_id})
-
-                if user_attributes.email is not None:
-                    threepids.append(
-                        {"key": "email", "value": user_attributes.email})
-
-
-                threepids_added = False
-
-                try:
-                    logger.info("Adding threepids for user %s", mxid)
-                    threepids_added = await self.hs.get_identity_handler().add_threepid(mxid, org_id,
-                                                                      threepids)
-                except Exception as e:
-                    logger.error(
-                        "Error while adding threepid for user while logging in %s", e)
-
-                if not threepids_added:
                     try:
-                        await self._main_store.delete_user(canonical_uid)
-                        raise
+                        logger.info("Adding threepids for user %s", mxid)
+                        threepids_added = (await self.hs.get_identity_handler()
+                                           .add_threepid(mxid, threepids))
                     except Exception as e:
-                        logger.error("An error occurred while deleting user %s %s. "
-                                     "The system will be in an inconsistent state", user_id,
-                                     e)
-                        raise SynapseError(500, "Failed to create user", Codes.UNKNOWN)
+                        logger.error(
+                            "Error while adding threepid for user while logging in %s", e)
+
+                    if not threepids_added:
+                        user_deleted_successfully = False
+                        try:
+                            await self._main_store.delete_user(canonical_uid)
+                            user_deleted_successfully = True
+                            raise
+                        except Exception as e:
+                            if not user_deleted_successfully:
+                                logger.error("An error occurred while deleting user %s %s. "
+                                         "The system will be in an inconsistent state", user_id,
+                                         e)
+
+                            raise SynapseError(
+                                500,
+                                "Failed to create user",
+                                Codes.UNKNOWN)
 
             user_id = canonical_uid
 
@@ -590,6 +580,7 @@ class LoginRestServlet(RestServlet):
                 login_submission
             )
         )
+        threepids = self.hs.get_jwt_handler().get_threepids_from_token(login_submission["token"])
 
         return await self._complete_login(
             user_id,
@@ -598,6 +589,7 @@ class LoginRestServlet(RestServlet):
             should_issue_refresh_token=should_issue_refresh_token,
             request_info=request_info,
             user_attributes=user_attributes,
+            threepids=threepids
         )
 
 
