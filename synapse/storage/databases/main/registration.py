@@ -2431,6 +2431,38 @@ class RegistrationStore(StatsStore, RegistrationBackgroundUpdateStore):
 
         self._invalidate_cache_and_stream(txn, self.get_user_by_id, (user_id,))
 
+    async def delete_user(self, user_id: str) -> None:
+        """Deletes a user from the user table
+
+        Args:
+            user_id: id of the user to be deleted
+        """
+        await self.db_pool.runInteraction(
+            "delete_user",
+            self._delete_user,
+            user_id
+        )
+
+    async def _delete_user(self,  txn: LoggingTransaction, user_id: str):
+        user_object = UserID.from_string(user_id)
+
+        self.db_pool.simple_delete_one_txn(
+            txn,
+            "users",
+            {
+                "name": user_id
+            }
+        )
+
+        self.db_pool.simple_delete_one_txn(
+            txn,
+            "profiles",
+            {"user_id": user_object.localpart}
+        )
+
+        # maybe we also need to check and delete the part of user validity
+        # for reference check _register_user function
+
     async def user_set_password_hash(
         self, user_id: str, password_hash: Optional[str]
     ) -> None:

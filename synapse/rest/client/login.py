@@ -55,7 +55,7 @@ from synapse.rest.client._base import client_patterns
 from synapse.rest.well_known import WellKnownBuilder
 from synapse.types import JsonDict, UserID
 from synapse.handlers.sso import UserAttributes
-
+from synapse.handlers.identity import ThreePid
 
 if TYPE_CHECKING:
     from synapse.server import HomeServer
@@ -415,6 +415,9 @@ class LoginRestServlet(RestServlet):
                     localpart=UserID.from_string(user_id).localpart,
                     default_display_name=default_display_name,
                 )
+
+                result = await self.hs.get_identity_handler().add_threepid()
+
             user_id = canonical_uid
 
         # If the account has been deactivated, do not proceed with the login.
@@ -548,7 +551,8 @@ class LoginRestServlet(RestServlet):
                 login_submission
             )
         )
-        return await self._complete_login(
+
+        login_response = await self._complete_login(
             user_id,
             login_submission,
             create_non_existent_users=True,
@@ -556,6 +560,28 @@ class LoginRestServlet(RestServlet):
             request_info=request_info,
             user_attributes=user_attributes,
         )
+
+        mxid = login_response.get("user_id")
+        org_id = user_attributes.org_id
+        threepids: List[ThreePid] = []
+        for key in ["first_name", "last_name", "email", "org_id"]:
+            if key in user_attributes and user_attributes[key] is not None:
+                threepid: ThreePid = {"key": key, "value": user_attributes[key]}
+                threepids.append(threepid)
+
+        try:
+            await self.hs.get_identity_handler().add_threepid(mxid, org_id, threepids)
+            return login_response
+        except Exception as e:
+            logger.error("Error while adding threepid for user while logging in %s", e)
+
+        try:
+            await self._main_store.delete_user(login_response.get("user_id"))
+        except Exception as e:
+            logger.error("An error occurred while deleting user %s %s", user_id, e)
+            raise SynapseError(500, "Failed to create user", Codes.UNKNOWN)
+
+
 
 
 def _get_auth_flow_dict_for_idp(idp: SsoIdentityProvider) -> JsonDict:

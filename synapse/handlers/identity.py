@@ -38,6 +38,7 @@ from synapse.util.stringutils import (
     valid_id_server_location,
 )
 from synapse.util.identity_server import IdentityServer
+from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
     from synapse.server import HomeServer
@@ -46,6 +47,9 @@ logger = logging.getLogger(__name__)
 
 id_server_scheme = "https://"
 
+class ThreePid(TypedDict):
+    key: str
+    value: str
 
 class IdentityHandler:
     def __init__(self, hs: "HomeServer"):
@@ -863,6 +867,90 @@ class IdentityHandler:
                          e)
             raise SynapseError(
                 500, "Unknown error occurred during identity server lookup"
+            )
+
+    async def add_threepid(
+        self,
+        mxid: str,
+        org_id: str,
+        threepids: List[ThreePid]
+    ) -> bool:
+        """
+        Returns a bool to indicate whether the threepid has been added or failed
+        """
+
+        id_access_token = await self.hs.get_identity_server_helper().get_token_for_user(
+            mxid)
+
+        if id_access_token is None:
+            raise SynapseError(
+                500,
+                "Unknown error while getting identity server access token"
+            )
+
+        headers = {"Authorization": create_id_access_token_header(id_access_token)}
+        id_server = self.hs.config.identity_server.identity_server_host
+
+        if id_server is None:
+            logger.error("identity_server_host is not set")
+            raise SynapseError(500, "Identity server host is not known")
+
+        try:
+            await self._http_client.post_json_get_json(
+                "%s%s/_matrix/identity/v2/identities/bind" % (
+                    id_server_scheme, id_server),
+                {
+                    "org_id": org_id,
+                    "mxid": mxid,
+                    "threepids": threepids
+                },
+                headers=headers,
+            )
+
+        except Exception as e:
+            logger.error("Error when adding three pids for a user: %s",
+                         e)
+
+            return False
+
+        return True
+
+
+    async def get_threepids_by_mxid(self, mxid: str, org_id: str) -> List[ThreePid]:
+        id_access_token = await self.hs.get_identity_server_helper().get_token_for_user(
+            mxid)
+
+        if id_access_token is None:
+            raise SynapseError(
+                500,
+                "Unknown error while getting identity server access token"
+            )
+
+        headers = {"Authorization": create_id_access_token_header(id_access_token)}
+        id_server = self.hs.config.identity_server.identity_server_host
+
+        if id_server is None:
+            logger.error("identity_server_host is not set")
+            raise SynapseError(500, "Identity server host is not known")
+
+        try:
+            threepids = await self._http_client.post_json_get_json(
+                "%s%s/_matrix/identity/v2/identities/" % (
+                    id_server_scheme, id_server),
+                {
+                    "mxid": mxid,
+                    "org_id": org_id,
+                },
+                headers=headers,
+            )
+
+            return threepids
+
+        except Exception as e:
+            logger.error("Error when looking up associations by mxid",
+                         e)
+            raise SynapseError(
+                500, "Unknown error occurred"
             )
 
 
