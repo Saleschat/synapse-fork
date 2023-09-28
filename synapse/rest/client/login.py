@@ -411,12 +411,51 @@ class LoginRestServlet(RestServlet):
                     if user_attributes is not None
                     else None
                 )
+
                 canonical_uid = await self.registration_handler.register_user(
                     localpart=UserID.from_string(user_id).localpart,
                     default_display_name=default_display_name,
                 )
 
-                result = await self.hs.get_identity_handler().add_threepid()
+                mxid = canonical_uid
+                org_id = user_attributes.org_id
+                threepids: List[ThreePid] = []
+
+                if user_attributes.first_name is not None:
+                    threepids.append({"key": "first_name", "value": user_attributes.first_name})
+
+                if user_attributes.last_name is not None:
+                    threepids.append(
+                        {"key": "last_name", "value": user_attributes.last_name})
+
+                if user_attributes.org_id is not None:
+                    threepids.append(
+                        {"key": "org_id", "value": user_attributes.org_id})
+
+                if user_attributes.email is not None:
+                    threepids.append(
+                        {"key": "email", "value": user_attributes.email})
+
+
+                threepids_added = False
+
+                try:
+                    logger.info("Adding threepids for user %s", mxid)
+                    threepids_added = await self.hs.get_identity_handler().add_threepid(mxid, org_id,
+                                                                      threepids)
+                except Exception as e:
+                    logger.error(
+                        "Error while adding threepid for user while logging in %s", e)
+
+                if not threepids_added:
+                    try:
+                        await self._main_store.delete_user(canonical_uid)
+                        raise
+                    except Exception as e:
+                        logger.error("An error occurred while deleting user %s %s. "
+                                     "The system will be in an inconsistent state", user_id,
+                                     e)
+                        raise SynapseError(500, "Failed to create user", Codes.UNKNOWN)
 
             user_id = canonical_uid
 
@@ -552,7 +591,7 @@ class LoginRestServlet(RestServlet):
             )
         )
 
-        login_response = await self._complete_login(
+        return await self._complete_login(
             user_id,
             login_submission,
             create_non_existent_users=True,
@@ -560,28 +599,6 @@ class LoginRestServlet(RestServlet):
             request_info=request_info,
             user_attributes=user_attributes,
         )
-
-        mxid = login_response.get("user_id")
-        org_id = user_attributes.org_id
-        threepids: List[ThreePid] = []
-        for key in ["first_name", "last_name", "email", "org_id"]:
-            if key in user_attributes and user_attributes[key] is not None:
-                threepid: ThreePid = {"key": key, "value": user_attributes[key]}
-                threepids.append(threepid)
-
-        try:
-            await self.hs.get_identity_handler().add_threepid(mxid, org_id, threepids)
-            return login_response
-        except Exception as e:
-            logger.error("Error while adding threepid for user while logging in %s", e)
-
-        try:
-            await self._main_store.delete_user(login_response.get("user_id"))
-        except Exception as e:
-            logger.error("An error occurred while deleting user %s %s", user_id, e)
-            raise SynapseError(500, "Failed to create user", Codes.UNKNOWN)
-
-
 
 
 def _get_auth_flow_dict_for_idp(idp: SsoIdentityProvider) -> JsonDict:

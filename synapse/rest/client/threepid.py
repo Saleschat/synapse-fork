@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class ThreepidRestServlet(RestServlet):
-    PATTERNS = client_patterns("/user/bind")
+    PATTERNS = client_patterns("/user/threepid/bind")
 
     def __init__(self, hs: "HomeServer"):
         super().__init__()
@@ -43,6 +43,7 @@ class ThreepidRestServlet(RestServlet):
             return 204, {}
 
         raise SynapseError(500, "Failed to add threepid(s)")
+
 
 def register_servlets(hs: "HomeServer", http_server: HttpServer) -> None:
     ThreepidRestServlet(hs).register(http_server)

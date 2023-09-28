@@ -2437,27 +2437,20 @@ class RegistrationStore(StatsStore, RegistrationBackgroundUpdateStore):
         Args:
             user_id: id of the user to be deleted
         """
-        await self.db_pool.runInteraction(
-            "delete_user",
-            self._delete_user,
-            user_id
-        )
-
-    async def _delete_user(self,  txn: LoggingTransaction, user_id: str):
         user_object = UserID.from_string(user_id)
 
-        self.db_pool.simple_delete_one_txn(
-            txn,
+        await self.db_pool.simple_delete(
             "users",
             {
                 "name": user_id
-            }
+            },
+            "Delete user"
         )
 
-        self.db_pool.simple_delete_one_txn(
-            txn,
+        await self.db_pool.simple_delete(
             "profiles",
-            {"user_id": user_object.localpart}
+            {"user_id": user_object.localpart},
+            "Delete user profile"
         )
 
         # maybe we also need to check and delete the part of user validity

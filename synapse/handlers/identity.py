@@ -804,8 +804,7 @@ class IdentityHandler:
 
         try:
             lookup_result = await self._http_client.post_json_get_json(
-                "%s%s/_matrix/identity/v2/identities/verify-org" % (
-                id_server_scheme, id_server),
+                "%s/_matrix/identity/v2/identities/verify-org" % (id_server,),
                 {
                     "user": user,
                     "other": other,
@@ -852,8 +851,7 @@ class IdentityHandler:
 
         try:
             lookup_result = await self._http_client.post_json_get_json(
-                "%s%s/_matrix/identity/v2/identities/lookup" % (
-                    id_server_scheme, id_server),
+                "%s/_matrix/identity/v2/identities/lookup" % (id_server,),
                 {
                     "search": search_term
                 },
@@ -897,8 +895,7 @@ class IdentityHandler:
 
         try:
             await self._http_client.post_json_get_json(
-                "%s%s/_matrix/identity/v2/identities/bind" % (
-                    id_server_scheme, id_server),
+                "%s/_matrix/identity/v2/identities/bind" % (id_server,),
                 {
                     "org_id": org_id,
                     "mxid": mxid,
@@ -935,8 +932,7 @@ class IdentityHandler:
 
         try:
             threepids = await self._http_client.post_json_get_json(
-                "%s%s/_matrix/identity/v2/identities/" % (
-                    id_server_scheme, id_server),
+                "%s/_matrix/identity/v2/identities/" % (id_server,),
                 {
                     "mxid": mxid,
                     "org_id": org_id,
