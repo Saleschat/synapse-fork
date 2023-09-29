@@ -39,7 +39,7 @@ from synapse.util.stringutils import (
 )
 from synapse.util.identity_server import IdentityServer
 from typing_extensions import TypedDict
-
+from synapse.http.client import Codes
 if TYPE_CHECKING:
     from synapse.server import HomeServer
 
@@ -884,7 +884,8 @@ class IdentityHandler:
         if org_id is None:
             raise SynapseError(
                 500,
-                "Cannot add threepids as `org_id` is not found"
+                "Cannot add threepids as `org_id` is not found",
+                Codes.MISSING_PARAM
             )
 
         id_access_token = await self.hs.get_identity_server_helper().get_token_for_user(
@@ -918,9 +919,7 @@ class IdentityHandler:
             logger.error("Error when adding three pids for a user: %s",
                          e)
 
-            return False
-
-        return True
+            raise SynapseError(500, "Failed to add 3pid for the user %s", mxid)
 
 
     async def get_threepids_by_mxid(self, mxid: str, org_id: str) -> List[ThreePid]:

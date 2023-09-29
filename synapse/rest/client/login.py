@@ -419,33 +419,9 @@ class LoginRestServlet(RestServlet):
                 )
 
                 if threepids is not None:
-                    mxid = canonical_uid
-                    threepids_added = False
-
-                    try:
-                        logger.info("Adding threepids for user %s", mxid)
-                        threepids_added = (await self.hs.get_identity_handler()
-                                           .add_threepid(mxid, threepids))
-                    except Exception as e:
-                        logger.error(
-                            "Error while adding threepid for user while logging in %s", e)
-
-                    if not threepids_added:
-                        user_deleted_successfully = False
-                        try:
-                            await self._main_store.delete_user(canonical_uid)
-                            user_deleted_successfully = True
-                            raise
-                        except Exception as e:
-                            if not user_deleted_successfully:
-                                logger.error("An error occurred while deleting user %s %s. "
-                                         "The system will be in an inconsistent state", user_id,
-                                         e)
-
-                            raise SynapseError(
-                                500,
-                                "Failed to create user",
-                                Codes.UNKNOWN)
+                    (self.hs
+                     .get_threepid_sync_scheduler()
+                     .enqueue_for_threepid_sync(canonical_uid, threepids))
 
             user_id = canonical_uid
 

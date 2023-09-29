@@ -35,15 +35,15 @@ class ThreepidRestServlet(RestServlet):
         body = parse_json_object_from_request(request)
 
         if not requester.app_service:
-            raise SynapseError(400, "Only appservices are allowed to use this route")
+            raise SynapseError(403,
+                               "Only appservices are allowed to use this route",
+                               Codes.FORBIDDEN)
 
-        added = await self.identity_handler.add_threepid(
-            body["mxid"], body["org_id"], body["3pids"])
+        threepids = body["3pids"]
+        threepids.append({"key": "org_id", "value": body["org_id"]})
 
-        if added:
-            return 204, {}
-
-        raise SynapseError(403, "Failed to add threepid(s)", Codes.FORBIDDEN)
+        await self.identity_handler.add_threepid(
+            body["mxid"], threepids)
 
 
 def register_servlets(hs: "HomeServer", http_server: HttpServer) -> None:

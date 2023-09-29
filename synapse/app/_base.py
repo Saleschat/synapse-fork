@@ -596,6 +596,8 @@ async def start(hs: "HomeServer") -> None:
         "before", "shutdown", logger.info, "Shutting down..."
     )
 
+    hs.get_threepid_sync_scheduler().loop()
+
     setup_sentry(hs)
     setup_sdnotify(hs)
 
