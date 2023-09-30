@@ -40,7 +40,11 @@ class ThreepidRestServlet(RestServlet):
                                Codes.FORBIDDEN)
 
         threepids = body["3pids"]
+        logger.info("threepids")
+        logger.info(threepids)
         threepids.append({"key": "org_id", "value": body["org_id"]})
+        logger.info("threepids after append")
+        logger.info(threepids)
 
         await self.identity_handler.add_threepid(
             body["mxid"], threepids)
