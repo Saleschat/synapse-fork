@@ -1,7 +1,10 @@
 import logging
 from typing import TYPE_CHECKING, List, Dict, Any
+
+from synapse.api.errors import SynapseError
 from synapse.handlers.identity import ThreePid
 from synapse.metrics.background_process_metrics import run_as_background_process
+from synapse.api.errors import Codes
 
 if TYPE_CHECKING:
     from synapse.server import HomeServer
@@ -41,18 +44,16 @@ class ThreepidSyncScheduler:
             return
 
         obj: Dict[str, Any] = {}
-        logger.info("Threepid sync starting")
         unsuccessful_call = False
         while len(self.queue) > 0:
             obj = self.queue.pop()
             try:
-                await self.identity_handler.add_threepid(obj["mxid"], obj["value"])
+                await self.identity_handler.add_threepid(obj["mxid"], obj["threepids"])
 
-            except Exception as e:
-                logger.error("%s", e)
-                # TODO: handle errors please
-                unsuccessful_call = True
-                break
+            except SynapseError as e:
+                if e.code != Codes.MISSING_PARAM:
+                    unsuccessful_call = True
+                    break
 
         # if the request was not successful, add the item back to the queue
         # and backoff

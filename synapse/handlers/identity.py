@@ -871,7 +871,7 @@ class IdentityHandler:
         self,
         mxid: str,
         threepids: List[ThreePid]
-    ) -> bool:
+    ) -> None:
         """
         Returns a bool to indicate whether the threepid has been added or failed
         """
@@ -881,6 +881,7 @@ class IdentityHandler:
             if threepid["key"] == "org_id":
                 org_id = threepid["value"]
 
+        # raise error as org_id is a required param, whatever happens
         if org_id is None:
             raise SynapseError(
                 500,

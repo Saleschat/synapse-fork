@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Tuple, Dict, Any
 from synapse.http.servlet import RestServlet, parse_json_object_from_request
 from ._base import client_patterns
 from synapse.http.site import SynapseRequest
@@ -34,20 +34,31 @@ class ThreepidRestServlet(RestServlet):
 
         body = parse_json_object_from_request(request)
 
+        self.validate_key(body, "mxid")
+        self.validate_key(body, "org_id")
+
+        if "3pids" not in body or not isinstance(body["3pids"], list) or len(body["3pids"]) == 0:
+            raise SynapseError(400, "3pids should be a non-empty list")
+
         if not requester.app_service:
             raise SynapseError(403,
                                "Only appservices are allowed to use this route",
                                Codes.FORBIDDEN)
 
         threepids = body["3pids"]
-        logger.info("threepids")
-        logger.info(threepids)
         threepids.append({"key": "org_id", "value": body["org_id"]})
-        logger.info("threepids after append")
-        logger.info(threepids)
+        mxid = body["mxid"]
 
-        await self.identity_handler.add_threepid(
-            body["mxid"], threepids)
+        self.hs.get_threepid_sync_scheduler().enqueue_for_threepid_sync(mxid, threepids)
+
+        return 202, {}
+
+    @staticmethod
+    def validate_key(body: Dict[str, Any], key: str):
+        if key not in body or not isinstance(body[key], str):
+            raise SynapseError(400,
+                               "%s is required in the body" % (key,),
+                               Codes.MISSING_PARAM)
 
 
 def register_servlets(hs: "HomeServer", http_server: HttpServer) -> None:
