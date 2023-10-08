@@ -47,9 +47,11 @@ logger = logging.getLogger(__name__)
 
 id_server_scheme = "https://"
 
+
 class ThreePid(TypedDict):
     key: str
     value: str
+
 
 class IdentityHandler:
     def __init__(self, hs: "HomeServer"):
@@ -187,7 +189,8 @@ class IdentityHandler:
         Returns:
             The response from the identity server
         """
-        logger.debug("Proxying threepid bind request for %s to %s", mxid, id_server)
+        logger.debug(
+            "Proxying threepid bind request for %s to %s", mxid, id_server)
 
         if not valid_id_server_location(id_server):
             raise SynapseError(
@@ -197,7 +200,8 @@ class IdentityHandler:
 
         bind_data = {"sid": sid, "client_secret": client_secret, "mxid": mxid}
         bind_url = "https://%s/_matrix/identity/v2/3pid/bind" % (id_server,)
-        headers = {"Authorization": create_id_access_token_header(id_access_token)}
+        headers = {
+            "Authorization": create_id_access_token_header(id_access_token)}
 
         try:
             # Use the blacklisting http client as this call is only to identity servers
@@ -319,9 +323,11 @@ class IdentityHandler:
             changed = False
             if e.code in (400, 404, 501):
                 # The remote server probably doesn't support unbinding (yet)
-                logger.warning("Received %d response while unbinding threepid", e.code)
+                logger.warning(
+                    "Received %d response while unbinding threepid", e.code)
             else:
-                logger.error("Failed to unbind threepid on identity server: %s", e)
+                logger.error(
+                    "Failed to unbind threepid on identity server: %s", e)
                 raise SynapseError(500, "Failed to contact identity server")
         except RequestTimedOutError:
             raise SynapseError(500, "Timed out contacting identity server")
@@ -397,7 +403,8 @@ class IdentityHandler:
             logger.exception(
                 "Error sending threepid validation email to %s", email_address
             )
-            raise SynapseError(500, "An error was encountered when sending the email")
+            raise SynapseError(
+                500, "An error was encountered when sending the email")
 
         token_expires = (
             self.hs.get_clock().time_msec()
@@ -536,7 +543,8 @@ class IdentityHandler:
         except RequestTimedOutError:
             raise SynapseError(500, "Timed out contacting identity server")
         except HttpResponseException as e:
-            logger.warning("Error contacting msisdn account_threepid_delegate: %s", e)
+            logger.warning(
+                "Error contacting msisdn account_threepid_delegate: %s", e)
             raise SynapseError(400, "Error contacting the identity server")
 
     async def lookup_3pid(
@@ -583,7 +591,8 @@ class IdentityHandler:
         # Check what hashing details are supported by this identity server
         try:
             hash_details = await self._http_client.get_json(
-                "%s%s/_matrix/identity/v2/hash_details" % (id_server_scheme, id_server),
+                "%s%s/_matrix/identity/v2/hash_details" % (
+                    id_server_scheme, id_server),
                 {"access_token": id_access_token},
             )
         except RequestTimedOutError:
@@ -646,11 +655,13 @@ class IdentityHandler:
             )
 
         # Authenticate with identity server given the access token from the client
-        headers = {"Authorization": create_id_access_token_header(id_access_token)}
+        headers = {
+            "Authorization": create_id_access_token_header(id_access_token)}
 
         try:
             lookup_results = await self._http_client.post_json_get_json(
-                "%s%s/_matrix/identity/v2/lookup" % (id_server_scheme, id_server),
+                "%s%s/_matrix/identity/v2/lookup" % (
+                    id_server_scheme, id_server),
                 {
                     "addresses": [lookup_value],
                     "algorithm": lookup_algorithm,
@@ -753,12 +764,14 @@ class IdentityHandler:
             id_server,
         )
 
-        url = "%s%s/_matrix/identity/v2/store-invite" % (id_server_scheme, id_server)
+        url = "%s%s/_matrix/identity/v2/store-invite" % (
+            id_server_scheme, id_server)
         try:
             data = await self._http_client.post_json_get_json(
                 url,
                 invite_config,
-                {"Authorization": create_id_access_token_header(id_access_token)},
+                {"Authorization": create_id_access_token_header(
+                    id_access_token)},
             )
         except RequestTimedOutError:
             raise SynapseError(500, "Timed out contacting identity server")
@@ -795,7 +808,8 @@ class IdentityHandler:
                 "Unknown error while getting identity server access token"
             )
 
-        headers = {"Authorization": create_id_access_token_header(id_access_token)}
+        headers = {
+            "Authorization": create_id_access_token_header(id_access_token)}
         id_server = self.hs.config.identity_server.identity_server_host
 
         if id_server is None:
@@ -817,12 +831,14 @@ class IdentityHandler:
             if "same_org" not in lookup_result:
                 logger.error(
                     "same_org key not found in lookup_result for same org constraint call to identity server")
-                raise SynapseError(500, "Identity server returned an empty response")
+                raise SynapseError(
+                    500, "Identity server returned an empty response")
 
             return lookup_result["same_org"]
 
         except Exception as e:
-            logger.error("Error when performing a v2 same org constraint lookup: %s", e)
+            logger.error(
+                "Error when performing a v2 same org constraint lookup: %s", e)
             raise SynapseError(
                 500, "Unknown error occurred during identity server lookup"
             )
@@ -842,7 +858,8 @@ class IdentityHandler:
                 "Unknown error while getting identity server access token"
             )
 
-        headers = {"Authorization": create_id_access_token_header(id_access_token)}
+        headers = {
+            "Authorization": create_id_access_token_header(id_access_token)}
         id_server = self.hs.config.identity_server.identity_server_host
 
         if id_server is None:
@@ -853,7 +870,8 @@ class IdentityHandler:
             lookup_result = await self._http_client.post_json_get_json(
                 "%s/_matrix/identity/v2/identities/lookup" % (id_server,),
                 {
-                    "search": search_term
+                    "search": search_term,
+                    "org_id": ""
                 },
                 headers=headers,
             )
@@ -861,7 +879,7 @@ class IdentityHandler:
             return lookup_result["mappings"]
 
         except Exception as e:
-            logger.error("Error when performing a v2 same org constraint lookup: %s",
+            logger.error("Error while performing user lookup: %s",
                          e)
             raise SynapseError(
                 500, "Unknown error occurred during identity server lookup"
@@ -898,7 +916,8 @@ class IdentityHandler:
                 "Unknown error while getting identity server access token"
             )
 
-        headers = {"Authorization": create_id_access_token_header(id_access_token)}
+        headers = {
+            "Authorization": create_id_access_token_header(id_access_token)}
         id_server = self.hs.config.identity_server.identity_server_host
 
         if id_server is None:
@@ -922,7 +941,6 @@ class IdentityHandler:
 
             raise SynapseError(500, "Failed to add 3pid for the user %s", mxid)
 
-
     async def get_threepids_by_mxid(self, mxid: str, org_id: str) -> List[ThreePid]:
         id_access_token = await self.hs.get_identity_server_helper().get_token_for_user(
             mxid)
@@ -933,7 +951,8 @@ class IdentityHandler:
                 "Unknown error while getting identity server access token"
             )
 
-        headers = {"Authorization": create_id_access_token_header(id_access_token)}
+        headers = {
+            "Authorization": create_id_access_token_header(id_access_token)}
         id_server = self.hs.config.identity_server.identity_server_host
 
         if id_server is None:

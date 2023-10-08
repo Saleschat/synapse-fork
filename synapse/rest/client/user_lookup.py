@@ -10,11 +10,11 @@ from synapse.http.client import SimpleHttpClient
 from synapse.http import RequestTimedOutError
 
 
-
 if TYPE_CHECKING:
     from synapse.server import HomeServer
 
 logger = logging.getLogger(__name__)
+
 
 class UserLookupRestServlet(RestServlet):
     PATTERNS = client_patterns("/user/lookup")
@@ -48,7 +48,7 @@ class UserLookupRestServlet(RestServlet):
         search_term = body["search_term"]
 
         if search_term == "":
-            raise SynapseError(400, "`search_term cannot be empty`")
+            raise SynapseError(400, "`search_term` cannot be empty")
 
         mxids = await self.identity_handler.user_lookup(user_id, search_term)
 
