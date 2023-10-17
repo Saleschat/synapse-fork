@@ -770,8 +770,9 @@ class RoomCreationHandler:
             print("Invitee user")
             print(invitee_user.to_string())
 
-            print("Invitee user is appservice??")
-            print(userinfo.appservice_id)
+            if userinfo is not None:
+                print("Invitee user is appservice??")
+                print(userinfo.appservice_id)
 
             print("not (requester.app_service or is_app_service_user) = ")
             print(not (requester.app_service or is_app_service_user))
