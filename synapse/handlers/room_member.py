@@ -99,7 +99,8 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
         self._worker_lock_handler = hs.get_worker_locks_handler()
 
         self.member_linearizer: Linearizer = Linearizer(name="member")
-        self.member_as_limiter = Linearizer(max_count=10, name="member_as_limiter")
+        self.member_as_limiter = Linearizer(
+            max_count=10, name="member_as_limiter")
 
         self.clock = hs.get_clock()
         self._spam_checker_module_callbacks = hs.get_module_api_callbacks().spam_checker
@@ -186,7 +187,8 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
         Joins actioned by this worker should use the usual `ratelimit` method, which
         checks the limit and increments the counter in one go.
         """
-        self._join_rate_per_room_limiter.record_action(requester=None, key=room_id)
+        self._join_rate_per_room_limiter.record_action(
+            requester=None, key=room_id)
 
     @abc.abstractmethod
     async def _remote_join(
@@ -748,7 +750,8 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
             if not await self.profile_handler.check_avatar_size_and_mime_type(
                 content["avatar_url"],
             ):
-                raise SynapseError(403, "This avatar is not allowed", Codes.FORBIDDEN)
+                raise SynapseError(
+                    403, "This avatar is not allowed", Codes.FORBIDDEN)
 
         # The event content should *not* include the authorising user as
         # it won't be properly signed. Strip it out since it might come
@@ -778,7 +781,8 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
         if effective_membership_state not in ("leave", "ban"):
             is_blocked = await self.store.is_room_blocked(room_id)
             if is_blocked:
-                raise SynapseError(403, "This room has been blocked on this server")
+                raise SynapseError(
+                    403, "This room has been blocked on this server")
 
         if effective_membership_state == Membership.INVITE:
             target_id = target.to_string()
@@ -787,7 +791,8 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
 
             # block any attempts to invite the server notices mxid
             if target_id == self._server_notices_mxid:
-                raise SynapseError(HTTPStatus.FORBIDDEN, "Cannot invite this user")
+                raise SynapseError(HTTPStatus.FORBIDDEN,
+                                   "Cannot invite this user")
 
             block_invite_result = None
 
@@ -1236,7 +1241,8 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
             old_room_id: The ID of the old room
             room_id: The ID of the new room
         """
-        logger.info("Transferring room state from %s to %s", old_room_id, room_id)
+        logger.info("Transferring room state from %s to %s",
+                    old_room_id, room_id)
 
         # Find all local users that were in the old room and copy over each user's state
         local_users = await self.store.get_local_users_in_room(old_room_id)
@@ -1321,7 +1327,8 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
             assert (
                 sender == requester.user
             ), "Sender (%s) must be same as requester (%s)" % (sender, requester.user)
-            assert self.hs.is_mine(sender), "Sender must be our own: %s" % (sender,)
+            assert self.hs.is_mine(
+                sender), "Sender must be our own: %s" % (sender,)
         else:
             requester = types.create_requester(target_user)
 
@@ -1339,7 +1346,8 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
         if event.membership not in (Membership.LEAVE, Membership.BAN):
             is_blocked = await self.store.is_room_blocked(room_id)
             if is_blocked:
-                raise SynapseError(403, "This room has been blocked on this server")
+                raise SynapseError(
+                    403, "This room has been blocked on this server")
 
         event = await self.event_creation_handler.handle_new_client_event(
             requester,
@@ -1630,7 +1638,8 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
         canonical_room_alias = ""
         canonical_alias_event = room_state.get((EventTypes.CanonicalAlias, ""))
         if canonical_alias_event:
-            canonical_room_alias = canonical_alias_event.content.get("alias", "")
+            canonical_room_alias = canonical_alias_event.content.get(
+                "alias", "")
 
         room_name = ""
         room_name_event = room_state.get((EventTypes.Name, ""))
@@ -1640,7 +1649,8 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
         room_type = None
         room_create_event = room_state.get((EventTypes.Create, ""))
         if room_create_event:
-            room_type = room_create_event.content.get(EventContentFields.ROOM_TYPE)
+            room_type = room_create_event.content.get(
+                EventContentFields.ROOM_TYPE)
 
         room_join_rules = ""
         join_rules_event = room_state.get((EventTypes.JoinRules, ""))
@@ -1727,10 +1737,10 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
 
         return False
 
-    async def verfiy_invitee_in_same_org(
-        self, 
-        user: UserID, 
-        invitee_user:Optional[UserID] = None,
+    async def verify_invitee_in_same_org(
+        self,
+        user: UserID,
+        invitee_user: Optional[UserID] = None,
         medium: Optional[str] = None,
         address: Optional[str] = None
     ) -> None:
@@ -1747,10 +1757,10 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
 
         invitee_str = invitee_user.to_string() if invitee_user is not None else None
 
-        in_same_org =  await self.identity_handler.have_same_org(
-            user.to_string(), 
+        in_same_org = await self.identity_handler.have_same_org(
+            user.to_string(),
             invitee_str,
-            medium, 
+            medium,
             address
         )
 
@@ -1760,6 +1770,7 @@ class RoomMemberHandler(metaclass=abc.ABCMeta):
                 "Only users from the same org can be invited",
                 Codes.FORBIDDEN
             )
+
 
 class RoomMemberMasterHandler(RoomMemberHandler):
     def __init__(self, hs: "HomeServer"):

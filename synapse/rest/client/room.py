@@ -254,7 +254,8 @@ class RoomStateEventRestServlet(RestServlet):
         )
 
         if not data:
-            raise SynapseError(404, "Event not found.", errcode=Codes.NOT_FOUND)
+            raise SynapseError(404, "Event not found.",
+                               errcode=Codes.NOT_FOUND)
 
         if format == "event":
             event = format_event_for_client_v2(data.get_dict())
@@ -355,14 +356,13 @@ class RoomSendEventRestServlet(TransactionRestServlet):
             "sender": requester.user.to_string(),
         }
 
-       
-        # The following if condition is commented to make sure that the timestamps 
+        # The following if condition is commented to make sure that the timestamps
         # are correct when the messages are stored in the database
         # if the `if` condition is not commented, then the timestamps for the person using this
-        # server will be the timestamp of the time when the messages were synced for a particular room 
+        # server will be the timestamp of the time when the messages were synced for a particular room
         # and not the original timestamp of the messages
         # NOTE: don't remove the if condition, let it be for future readers
-        
+
         # if requester.app_service:
         origin_server_ts = parse_integer(request, "ts")
         logger.info(origin_server_ts)
@@ -416,7 +416,8 @@ class JoinRoomAliasServlet(ResolveRoomIdMixin, TransactionRestServlet):
 
     def __init__(self, hs: "HomeServer"):
         super().__init__(hs)
-        super(ResolveRoomIdMixin, self).__init__(hs)  # ensure the Mixin is set up
+        super(ResolveRoomIdMixin, self).__init__(
+            hs)  # ensure the Mixin is set up
         self.auth = hs.get_auth()
 
     def register(self, http_server: HttpServer) -> None:
@@ -431,11 +432,13 @@ class JoinRoomAliasServlet(ResolveRoomIdMixin, TransactionRestServlet):
         room_identifier: str,
         txn_id: Optional[str],
     ) -> Tuple[int, JsonDict]:
-        content = parse_json_object_from_request(request, allow_empty_body=True)
+        content = parse_json_object_from_request(
+            request, allow_empty_body=True)
 
         # twisted.web.server.Request.args is incorrectly defined as Optional[Any]
         args: Dict[bytes, List[bytes]] = request.args  # type: ignore
-        remote_room_hosts = parse_strings_from_args(args, "server_name", required=False)
+        remote_room_hosts = parse_strings_from_args(
+            args, "server_name", required=False)
         room_id, remote_room_hosts = await self.resolve_room_id(
             room_identifier,
             remote_room_hosts,
@@ -554,7 +557,8 @@ class PublicRoomListRestServlet(RestServlet):
         elif third_party_instance_id is None:
             network_tuple = ThirdPartyInstanceID(None, None)
         else:
-            network_tuple = ThirdPartyInstanceID.from_string(third_party_instance_id)
+            network_tuple = ThirdPartyInstanceID.from_string(
+                third_party_instance_id)
 
         if limit == 0:
             # zero is a special value which corresponds to no limit.
@@ -639,7 +643,8 @@ class RoomMemberListRestServlet(RestServlet):
 
         for event in events:
             if (membership and event["content"].get("membership") != membership) or (
-                not_membership and event["content"].get("membership") == not_membership
+                not_membership and event["content"].get(
+                    "membership") == not_membership
             ):
                 continue
             chunk.append(event)
@@ -650,7 +655,8 @@ class RoomMemberListRestServlet(RestServlet):
 # deprecated in favour of /members?membership=join?
 # except it does custom AS logic and has a simpler return format
 class JoinedRoomMemberListRestServlet(RestServlet):
-    PATTERNS = client_patterns("/rooms/(?P<room_id>[^/]*)/joined_members$", v1=True)
+    PATTERNS = client_patterns(
+        "/rooms/(?P<room_id>[^/]*)/joined_members$", v1=True)
     CATEGORY = "Client API requests"
 
     def __init__(self, hs: "HomeServer"):
@@ -765,7 +771,8 @@ class RoomStateRestServlet(RestServlet):
 
 # TODO: Needs unit testing
 class RoomInitialSyncRestServlet(RestServlet):
-    PATTERNS = client_patterns("/rooms/(?P<room_id>[^/]*)/initialSync$", v1=True)
+    PATTERNS = client_patterns(
+        "/rooms/(?P<room_id>[^/]*)/initialSync$", v1=True)
     CATEGORY = "Sync requests"
 
     def __init__(self, hs: "HomeServer"):
@@ -832,7 +839,8 @@ class RoomEventServlet(RestServlet):
             if power_level_event:
                 auth_events[(EventTypes.PowerLevels, "")] = power_level_event
 
-            redact_level = event_auth.get_named_level(auth_events, "redact", 50)
+            redact_level = event_auth.get_named_level(
+                auth_events, "redact", 50)
             user_level = event_auth.get_user_power_level(
                 requester.user.to_string(), auth_events
             )
@@ -854,7 +862,8 @@ class RoomEventServlet(RestServlet):
             # This endpoint is supposed to return a 404 when the requester does
             # not have permission to access the event
             # https://matrix.org/docs/spec/client_server/r0.5.0#get-matrix-client-r0-rooms-roomid-event-eventid
-            raise SynapseError(404, "Event not found.", errcode=Codes.NOT_FOUND)
+            raise SynapseError(404, "Event not found.",
+                               errcode=Codes.NOT_FOUND)
 
         if event:
             if include_unredacted_content and await self._store.have_censored_event(
@@ -916,7 +925,8 @@ class RoomEventContextServlet(RestServlet):
         )
 
         if not event_context:
-            raise SynapseError(404, "Event not found.", errcode=Codes.NOT_FOUND)
+            raise SynapseError(404, "Event not found.",
+                               errcode=Codes.NOT_FOUND)
 
         time_now = self.clock.time_msec()
         serializer_options = SerializeEventConfig(requester=requester)
@@ -1013,7 +1023,8 @@ class RoomMembershipRestServlet(TransactionRestServlet):
             Membership.LEAVE,
         }:
             raise AuthError(403, "Guest access not allowed")
-        content = parse_json_object_from_request(request, allow_empty_body=True)
+        content = parse_json_object_from_request(
+            request, allow_empty_body=True)
 
         # we're allowing app service users and various bots to not have the same org constraint
         if membership_action == "invite" and not requester.app_service:
@@ -1028,7 +1039,7 @@ class RoomMembershipRestServlet(TransactionRestServlet):
                 except Exception:
                     raise SynapseError(400, "Invalid user_id: %s" % (invitee,))
 
-            await self.room_member_handler.verfiy_invitee_in_same_org(
+            await self.room_member_handler.verify_invitee_in_same_org(
                 requester.user,
                 invitee_user=invitee,
                 medium=(content["medium"] if "medium" in content else None),
@@ -1251,7 +1262,8 @@ class RoomTypingRestServlet(RestServlet):
         requester = await self.auth.get_user_by_req(request)
 
         if not self._is_typing_writer:
-            raise Exception("Got /typing request on instance that is not typing writer")
+            raise Exception(
+                "Got /typing request on instance that is not typing writer")
 
         room_id = urlparse.unquote(room_id)
         target_user = UserID.from_string(urlparse.unquote(user_id))
@@ -1366,7 +1378,8 @@ def register_txn_path(
     on_POST = getattr(servlet, "on_POST", None)
     on_PUT = getattr(servlet, "on_PUT", None)
     if on_POST is None or on_PUT is None:
-        raise RuntimeError("on_POST and on_PUT must exist when using register_txn_path")
+        raise RuntimeError(
+            "on_POST and on_PUT must exist when using register_txn_path")
     http_server.register_paths(
         "POST",
         client_patterns(regex_string + "$", v1=True),
@@ -1403,7 +1416,8 @@ class TimestampLookupRestServlet(RestServlet):
     """
 
     PATTERNS = (
-        re.compile("^/_matrix/client/v1/rooms/(?P<room_id>[^/]*)/timestamp_to_event$"),
+        re.compile(
+            "^/_matrix/client/v1/rooms/(?P<room_id>[^/]*)/timestamp_to_event$"),
     )
     CATEGORY = "Client API requests"
 
@@ -1420,7 +1434,8 @@ class TimestampLookupRestServlet(RestServlet):
         await self._auth.check_user_in_room_or_world_readable(room_id, requester)
 
         timestamp = parse_integer(request, "ts", required=True)
-        direction = parse_enum(request, "dir", Direction, default=Direction.FORWARDS)
+        direction = parse_enum(request, "dir", Direction,
+                               default=Direction.FORWARDS)
 
         (
             event_id,
@@ -1436,7 +1451,8 @@ class TimestampLookupRestServlet(RestServlet):
 
 
 class RoomHierarchyRestServlet(RestServlet):
-    PATTERNS = (re.compile("^/_matrix/client/v1/rooms/(?P<room_id>[^/]*)/hierarchy$"),)
+    PATTERNS = (re.compile(
+        "^/_matrix/client/v1/rooms/(?P<room_id>[^/]*)/hierarchy$"),)
     WORKERS = PATTERNS
     CATEGORY = "Client API requests"
 
@@ -1465,7 +1481,8 @@ class RoomHierarchyRestServlet(RestServlet):
         return 200, await self._room_summary_handler.get_room_hierarchy(
             requester,
             room_id,
-            suggested_only=parse_boolean(request, "suggested_only", default=False),
+            suggested_only=parse_boolean(
+                request, "suggested_only", default=False),
             max_depth=max_depth,
             limit=limit,
             from_token=parse_string(request, "from"),
@@ -1498,7 +1515,8 @@ class RoomSummaryRestServlet(ResolveRoomIdMixin, RestServlet):
 
         # twisted.web.server.Request.args is incorrectly defined as Optional[Any]
         args: Dict[bytes, List[bytes]] = request.args  # type: ignore
-        remote_room_hosts = parse_strings_from_args(args, "via", required=False)
+        remote_room_hosts = parse_strings_from_args(
+            args, "via", required=False)
         room_id, remote_room_hosts = await self.resolve_room_id(
             room_identifier,
             remote_room_hosts,

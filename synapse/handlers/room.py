@@ -291,9 +291,11 @@ class RoomCreationHandler:
             ShadowBanError if the requester is shadow-banned.
         """
         user_id = requester.user.to_string()
-        assert self.hs.is_mine_id(user_id), "User must be our own: %s" % (user_id,)
+        assert self.hs.is_mine_id(
+            user_id), "User must be our own: %s" % (user_id,)
 
-        logger.info("Creating new room %s to replace %s", new_room_id, old_room_id)
+        logger.info("Creating new room %s to replace %s",
+                    new_room_id, old_room_id)
 
         # create the new room. may raise a `StoreError` in the exceedingly unlikely
         # event of a room ID collision.
@@ -381,8 +383,10 @@ class RoomCreationHandler:
         # 50, but if the default PL in a room is 50 or more, then we set the
         # required PL above that.
 
-        pl_content = copy_and_fixup_power_levels_contents(old_room_pl_state.content)
-        users_default: int = pl_content.get("users_default", 0)  # type: ignore[assignment]
+        pl_content = copy_and_fixup_power_levels_contents(
+            old_room_pl_state.content)
+        users_default: int = pl_content.get(
+            "users_default", 0)  # type: ignore[assignment]
         restricted_level = max(users_default + 1, 50)
 
         updated = False
@@ -399,7 +403,8 @@ class RoomCreationHandler:
                 pl_content[v] = restricted_level
                 updated = True
             else:
-                logger.debug("Not setting level for %s (already %i)", v, current)
+                logger.debug(
+                    "Not setting level for %s (already %i)", v, current)
 
         if updated:
             try:
@@ -493,7 +498,8 @@ class RoomCreationHandler:
         ]
 
         # Copy the room type as per MSC3818.
-        room_type = old_room_create_event.content.get(EventContentFields.ROOM_TYPE)
+        room_type = old_room_create_event.content.get(
+            EventContentFields.ROOM_TYPE)
         if room_type is not None:
             creation_content[EventContentFields.ROOM_TYPE] = room_type
 
@@ -561,7 +567,8 @@ class RoomCreationHandler:
         users_default = power_levels.get("users_default", 0)
         current_power_level = user_power_levels.get(user_id, users_default)
         try:
-            current_power_level_int = int(current_power_level)  # type: ignore[arg-type]
+            current_power_level_int = int(
+                current_power_level)  # type: ignore[arg-type]
         except (TypeError, ValueError):
             current_power_level_int = 0
         # Raise the requester's power level in the new room if necessary
@@ -583,7 +590,8 @@ class RoomCreationHandler:
         # Transfer membership events
         old_room_member_state_ids = (
             await self._storage_controllers.state.get_current_state_ids(
-                old_room_id, StateFilter.from_types([(EventTypes.Member, None)])
+                old_room_id, StateFilter.from_types(
+                    [(EventTypes.Member, None)])
             )
         )
 
@@ -618,7 +626,8 @@ class RoomCreationHandler:
     ) -> None:
         # check to see if we have a canonical alias.
         canonical_alias_event = None
-        canonical_alias_event_id = old_room_state.get((EventTypes.CanonicalAlias, ""))
+        canonical_alias_event_id = old_room_state.get(
+            (EventTypes.CanonicalAlias, ""))
         if canonical_alias_event_id:
             canonical_alias_event = await self.store.get_event(canonical_alias_event_id)
 
@@ -638,10 +647,12 @@ class RoomCreationHandler:
             old_canonical_alias_content.pop("alias", None)
 
         # We convert to a list as it will be a Tuple.
-        old_alt_aliases = list(old_canonical_alias_content.get("alt_aliases", []))
+        old_alt_aliases = list(
+            old_canonical_alias_content.get("alt_aliases", []))
         if old_alt_aliases:
             old_canonical_alias_content["alt_aliases"] = old_alt_aliases
-            new_alt_aliases = new_canonical_alias_content.setdefault("alt_aliases", [])
+            new_alt_aliases = new_canonical_alias_content.setdefault(
+                "alt_aliases", [])
             for alias in canonical_alias_event.content.get("alt_aliases", []):
                 try:
                     if self.hs.is_mine_id(alias):
@@ -674,7 +685,8 @@ class RoomCreationHandler:
         except SynapseError as e:
             # again I'm not really expecting this to fail, but if it does, I'd rather
             # we returned the new room to the client at this point.
-            logger.error("Unable to send updated alias events in old room: %s", e)
+            logger.error(
+                "Unable to send updated alias events in old room: %s", e)
 
         try:
             await self.event_creation_handler.create_and_send_nonmember_event(
@@ -691,7 +703,8 @@ class RoomCreationHandler:
         except SynapseError as e:
             # again I'm not really expecting this to fail, but if it does, I'd rather
             # we returned the new room to the client at this point.
-            logger.error("Unable to send updated alias events in new room: %s", e)
+            logger.error(
+                "Unable to send updated alias events in new room: %s", e)
 
     async def create_room(
         self,
@@ -746,12 +759,14 @@ class RoomCreationHandler:
 
             # get the user from the database
             userinfo = await self.store.get_userinfo_by_id(invitee_user.to_string())
-            is_app_service_user = True if userinfo and userinfo.appservice_id else False
+            is_app_service_user = False
+            if userinfo and userinfo.appservice_id:
+                is_app_service_user = True
 
             # if the requester is appservice or the invitee is a user created by the app service
             # then we can let them bypass the same org constraint
             if not (requester.app_service or is_app_service_user):
-                await self.room_member_handler.verfiy_invitee_in_same_org(
+                await self.room_member_handler.verify_invitee_in_same_org(
                     requester.user,
                     invitee_user=invitee_user
                 )
@@ -770,7 +785,7 @@ class RoomCreationHandler:
                 )
 
             if not requester.app_service:
-                await self.room_member_handler.verfiy_invitee_in_same_org(
+                await self.room_member_handler.verify_invitee_in_same_org(
                     requester.user,
                     medium=invite_3pid["medium"],
                     address=invite_3pid["address"]
@@ -819,7 +834,8 @@ class RoomCreationHandler:
         )
 
         if not isinstance(room_version_id, str):
-            raise SynapseError(400, "room_version must be a string", Codes.BAD_JSON)
+            raise SynapseError(
+                400, "room_version must be a string", Codes.BAD_JSON)
 
         room_version = KNOWN_ROOM_VERSIONS.get(room_version_id)
         if room_version is None:
@@ -854,8 +870,8 @@ class RoomCreationHandler:
             mapping = await self.store.get_association_from_room_alias(room_alias)
 
             if mapping:
-                raise SynapseError(400, "Room alias already taken", Codes.ROOM_IN_USE)
-
+                raise SynapseError(
+                    400, "Room alias already taken", Codes.ROOM_IN_USE)
 
         if (invite_list or invite_3pid_list) and requester.shadow_banned:
             # We randomly sleep a bit just to annoy the requester.
@@ -880,7 +896,8 @@ class RoomCreationHandler:
 
         await self.event_creation_handler.assert_accepted_privacy_policy(requester)
 
-        power_level_content_override = config.get("power_level_content_override")
+        power_level_content_override = config.get(
+            "power_level_content_override")
         if (
             power_level_content_override
             and "users" in power_level_content_override
@@ -942,7 +959,8 @@ class RoomCreationHandler:
 
         initial_state = OrderedDict()
         for val in raw_initial_state:
-            initial_state[(val["type"], val.get("state_key", ""))] = val["content"]
+            initial_state[(val["type"], val.get(
+                "state_key", ""))] = val["content"]
 
         creation_content = config.get("creation_content", {})
 
@@ -1081,7 +1099,8 @@ class RoomCreationHandler:
             event sent to the room.
         """
         creator_id = creator.user.to_string()
-        event_keys = {"room_id": room_id, "sender": creator_id, "state_key": ""}
+        event_keys = {"room_id": room_id,
+                      "sender": creator_id, "state_key": ""}
         depth = 1
 
         # the most recently created event
@@ -1134,7 +1153,8 @@ class RoomCreationHandler:
 
             depth += 1
             prev_event = [new_event.event_id]
-            state_map[(new_event.type, new_event.state_key)] = new_event.event_id
+            state_map[(new_event.type, new_event.state_key)
+                      ] = new_event.event_id
 
             return new_event, new_unpersisted_context
 
@@ -1172,7 +1192,8 @@ class RoomCreationHandler:
         # update the depth and state map here as the membership event has been created
         # through a different code path
         depth += 1
-        state_map[(EventTypes.Member, creator.user.to_string())] = member_event_id
+        state_map[(EventTypes.Member, creator.user.to_string())
+                  ] = member_event_id
 
         # we need the state group of the membership event as it is the current state group
         event_to_state = (
@@ -1225,7 +1246,8 @@ class RoomCreationHandler:
             # If the server config contains default_power_level_content_override,
             # and that contains information for this room preset, apply it.
             if self._default_power_level_content_override:
-                override = self._default_power_level_content_override.get(preset_config)
+                override = self._default_power_level_content_override.get(
+                    preset_config)
                 if override is not None:
                     power_level_content.update(override)
 
@@ -1242,7 +1264,8 @@ class RoomCreationHandler:
 
         if room_alias and (EventTypes.CanonicalAlias, "") not in initial_state:
             room_alias_event, room_alias_context = await create_event(
-                EventTypes.CanonicalAlias, {"alias": room_alias.to_string()}, True
+                EventTypes.CanonicalAlias, {
+                    "alias": room_alias.to_string()}, True
             )
             events_to_send.append((room_alias_event, room_alias_context))
 
@@ -1269,7 +1292,8 @@ class RoomCreationHandler:
                     {EventContentFields.GUEST_ACCESS: GuestAccess.CAN_JOIN},
                     True,
                 )
-                events_to_send.append((guest_access_event, guest_access_context))
+                events_to_send.append(
+                    (guest_access_event, guest_access_context))
 
         for (etype, state_key), content in initial_state.items():
             event, context = await create_event(
@@ -1350,11 +1374,14 @@ class RoomCreationHandler:
 
         if preset_config["encrypted"] or room_encryption_event:
             if self._default_power_level_content_override:
-                override = self._default_power_level_content_override.get(preset_name)
+                override = self._default_power_level_content_override.get(
+                    preset_name)
                 if override is not None:
                     event_levels = override.get("events", {})
-                    room_admin_level = event_levels.get(EventTypes.PowerLevels, 100)
-                    encryption_level = event_levels.get(EventTypes.RoomEncryption, 100)
+                    room_admin_level = event_levels.get(
+                        EventTypes.PowerLevels, 100)
+                    encryption_level = event_levels.get(
+                        EventTypes.RoomEncryption, 100)
                     if encryption_level > room_admin_level:
                         raise SynapseError(
                             403,
@@ -1488,7 +1515,8 @@ class RoomContextHandler:
 
         filtered = await filter_evts([event])
         if not filtered:
-            raise AuthError(403, "You don't have permission to access that event.")
+            raise AuthError(
+                403, "You don't have permission to access that event.")
 
         results = await self.store.get_events_around(
             room_id, event_id, before_limit, after_limit, event_filter
@@ -1707,7 +1735,8 @@ class TimestampLookupHandler:
         if not local_event_id or not local_event:
             raise SynapseError(
                 404,
-                "Unable to find event from %s in direction %s" % (timestamp, direction),
+                "Unable to find event from %s in direction %s" % (
+                    timestamp, direction),
                 errcode=Codes.NOT_FOUND,
             )
 
@@ -1929,7 +1958,8 @@ class RoomShutdownHandler:
             # that we can assume that all the joins/invites have propagated before
             # we try and auto join below.
             await self._replication.wait_for_stream_position(
-                self.hs.config.worker.events_shard_config.get_instance(new_room_id),
+                self.hs.config.worker.events_shard_config.get_instance(
+                    new_room_id),
                 "events",
                 stream_id,
             )
@@ -1963,7 +1993,8 @@ class RoomShutdownHandler:
 
                 # Wait for leave to come in over replication before trying to forget.
                 await self._replication.wait_for_stream_position(
-                    self.hs.config.worker.events_shard_config.get_instance(room_id),
+                    self.hs.config.worker.events_shard_config.get_instance(
+                        room_id),
                     "events",
                     stream_id,
                 )
