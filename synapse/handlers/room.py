@@ -763,6 +763,15 @@ class RoomCreationHandler:
             if userinfo and userinfo.appservice_id:
                 is_app_service_user = True
 
+            print("Invitee user")
+            print(invitee_user.to_string())
+
+            print("Invitee user is appservice??")
+            print(userinfo.appservice_id)
+
+            print("not (requester.app_service or is_app_service_user) = ")
+            print(not (requester.app_service or is_app_service_user))
+
             # if the requester is appservice or the invitee is a user created by the app service
             # then we can let them bypass the same org constraint
             if not (requester.app_service or is_app_service_user):
