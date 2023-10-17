@@ -759,6 +759,10 @@ class RoomCreationHandler:
 
             # get the user from the database
             userinfo = await self.store.get_userinfo_by_id(invitee_user.to_string())
+
+            print("Is userinfo None")
+            print(userinfo is None)
+
             is_app_service_user = False
             if userinfo and userinfo.appservice_id:
                 is_app_service_user = True
