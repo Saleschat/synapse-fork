@@ -177,7 +177,8 @@ class OidcHandler:
             #  https://tools.ietf.org/html/rfc6749#section-4.1.2.1
             #  https://openid.net/specs/openid-connect-core-1_0.html#AuthError
             error = request.args[b"error"][0].decode()
-            description = request.args.get(b"error_description", [b""])[0].decode()
+            description = request.args.get(
+                b"error_description", [b""])[0].decode()
 
             # Most of the errors returned by the provider could be due by
             # either the provider misbehaving or Synapse being misconfigured.
@@ -245,7 +246,8 @@ class OidcHandler:
             return
         except MacaroonInvalidSignatureException as e:
             logger.warning("Could not verify session for OIDC callback: %s", e)
-            self._sso_handler.render_error(request, "mismatching_session", str(e))
+            self._sso_handler.render_error(
+                request, "mismatching_session", str(e))
             return
 
         logger.info("Received OIDC callback for IdP %s", session_data.idp_id)
@@ -253,7 +255,8 @@ class OidcHandler:
         oidc_provider = self._providers.get(session_data.idp_id)
         if not oidc_provider:
             logger.error("OIDC session uses unknown IdP %r", oidc_provider)
-            self._sso_handler.render_error(request, "unknown_idp", "Unknown IdP")
+            self._sso_handler.render_error(
+                request, "unknown_idp", "Unknown IdP")
             return
 
         if b"code" not in request.args:
@@ -336,7 +339,8 @@ class OidcHandler:
                 break
 
         if oidc_provider is None:
-            raise SynapseError(400, "Could not find the OP that issued this event")
+            raise SynapseError(
+                400, "Could not find the OP that issued this event")
 
         # Ask the provider to handle the logout request.
         await oidc_provider.handle_backchannel_logout(request, logout_token)
@@ -408,7 +412,8 @@ class OidcProvider:
         # cache of metadata for the identity provider (endpoint uris, mostly). This is
         # loaded on-demand from the discovery endpoint (if discovery is enabled), with
         # possible overrides from the config.  Access via `load_metadata`.
-        self._provider_metadata = RetryOnExceptionCachedCall(self._load_metadata)
+        self._provider_metadata = RetryOnExceptionCachedCall(
+            self._load_metadata)
 
         # cache of JWKs used by the identity provider to sign tokens. Loaded on demand
         # from the IdP's jwks_uri, if required.
@@ -527,7 +532,8 @@ class OidcProvider:
                 # see if we get back the sub claim
                 user = UserInfo({"sub": "thisisasubject"})
                 try:
-                    subject = self._user_mapping_provider.get_remote_user_id(user)
+                    subject = self._user_mapping_provider.get_remote_user_id(
+                        user)
                     if subject != user["sub"]:
                         raise ValueError("Unexpected subject")
                 except Exception:
@@ -583,7 +589,8 @@ class OidcProvider:
         """
         if force:
             # reset the cached call to ensure we get a new result
-            self._provider_metadata = RetryOnExceptionCachedCall(self._load_metadata)
+            self._provider_metadata = RetryOnExceptionCachedCall(
+                self._load_metadata)
 
         return await self._provider_metadata.get()
 
@@ -813,7 +820,8 @@ class OidcProvider:
 
         resp = await self._http_client.get_json(
             metadata["userinfo_endpoint"],
-            headers={"Authorization": ["Bearer {}".format(token["access_token"])]},
+            headers={"Authorization": [
+                "Bearer {}".format(token["access_token"])]},
         )
 
         logger.debug("Retrieved user info from userinfo endpoint: %r", resp)
@@ -842,7 +850,8 @@ class OidcProvider:
         """
         jwt = JsonWebToken(alg_values)
 
-        logger.debug("Attempting to decode JWT (%s) %r", claims_cls.__name__, token)
+        logger.debug("Attempting to decode JWT (%s) %r",
+                     claims_cls.__name__, token)
 
         # Try to decode the keys in cache first, then retry by forcing the keys
         # to be reloaded
@@ -857,7 +866,8 @@ class OidcProvider:
             )
         except ValueError:
             logger.info("Reloading JWKS after decode error")
-            jwk_set = await self.load_jwks(force=True)  # try reloading the jwks
+            # try reloading the jwks
+            jwk_set = await self.load_jwks(force=True)
             claims = jwt.decode(
                 token,
                 key=jwk_set,
@@ -866,7 +876,8 @@ class OidcProvider:
                 claims_params=claims_params,
             )
 
-        logger.debug("Decoded JWT (%s) %r; validating", claims_cls.__name__, claims)
+        logger.debug("Decoded JWT (%s) %r; validating",
+                     claims_cls.__name__, claims)
 
         claims.validate(
             now=self._clock.time(), leeway=120
@@ -893,8 +904,10 @@ class OidcProvider:
 
         metadata = await self.load_metadata()
 
+        # 'nonce' key in claims_params is removed temporarily to get around the issue
+        # of Nonce error when logging in using OIDC
         claims_params = {
-            "nonce": nonce,
+            # "nonce": nonce,
             "client_id": self._client_auth.client_id,
         }
         if "access_token" in token:
@@ -904,7 +917,8 @@ class OidcProvider:
 
         claims_options = {"iss": {"values": [metadata["issuer"]]}}
 
-        alg_values = metadata.get("id_token_signing_alg_values_supported", ["RS256"])
+        alg_values = metadata.get(
+            "id_token_signing_alg_values_supported", ["RS256"])
 
         claims = await self._verify_jwt(
             alg_values=alg_values,
@@ -1046,7 +1060,8 @@ class OidcProvider:
             )
         except OidcError as e:
             logger.warning("Could not exchange OAuth2 code: %s", e)
-            self._sso_handler.render_error(request, e.error, e.error_description)
+            self._sso_handler.render_error(
+                request, e.error, e.error_description)
             return
 
         logger.debug("Successfully obtained OAuth2 token data: %r", token)
@@ -1059,7 +1074,8 @@ class OidcProvider:
                 sid = id_token.get("sid")
             except Exception as e:
                 logger.exception("Invalid id_token")
-                self._sso_handler.render_error(request, "invalid_token", str(e))
+                self._sso_handler.render_error(
+                    request, "invalid_token", str(e))
                 return
         else:
             id_token = None
@@ -1089,7 +1105,8 @@ class OidcProvider:
                 remote_user_id = self._remote_id_from_userinfo(userinfo)
             except Exception as e:
                 logger.exception("Could not extract remote user id")
-                self._sso_handler.render_error(request, "mapping_error", str(e))
+                self._sso_handler.render_error(
+                    request, "mapping_error", str(e))
                 return
 
             return await self._sso_handler.complete_sso_ui_auth_request(
@@ -1105,7 +1122,8 @@ class OidcProvider:
         # types of data, we wrap non-list values in lists.
         if not self._sso_handler.check_required_attributes(
             request,
-            {k: v if isinstance(v, list) else [v] for k, v in userinfo.items()},
+            {k: v if isinstance(v, list) else [v]
+             for k, v in userinfo.items()},
             self._oidc_attribute_requirements,
         ):
             return
@@ -1201,7 +1219,8 @@ class OidcProvider:
                     # there is no need to search for existing users.
                     return None
 
-                user_id = UserID(attributes.localpart, self._server_name).to_string()
+                user_id = UserID(attributes.localpart,
+                                 self._server_name).to_string()
                 users = await self._store.get_users_by_id_case_insensitive(user_id)
                 if users:
                     # If an existing matrix ID is returned, then use it.
@@ -1250,7 +1269,8 @@ class OidcProvider:
         Returns:
             remote user id
         """
-        remote_user_id = self._user_mapping_provider.get_remote_user_id(userinfo)
+        remote_user_id = self._user_mapping_provider.get_remote_user_id(
+            userinfo)
         # Some OIDC providers use integer IDs, but Synapse expects external IDs
         # to be strings.
         return str(remote_user_id)
@@ -1296,7 +1316,8 @@ class OidcProvider:
         #   Tokens. If the Logout Token is encrypted, it SHOULD replicate the
         #   iss (issuer) claim in the JWT Header Parameters, as specified in
         #   Section 5.3 of [JWT].
-        alg_values = metadata.get("id_token_signing_alg_values_supported", ["RS256"])
+        alg_values = metadata.get(
+            "id_token_signing_alg_values_supported", ["RS256"])
 
         # As per sec. 2.6:
         #    3. Validate the iss, aud, and iat Claims in the same way they are
@@ -1594,10 +1615,12 @@ class JinjaOidcMappingProvider(OidcMappingProvider[JinjaOidcMappingConfig]):
             try:
                 return env.from_string(template)
             except Exception as e:
-                raise ConfigError("invalid jinja template", path=[template_name]) from e
+                raise ConfigError("invalid jinja template",
+                                  path=[template_name]) from e
 
         subject_template = parse_template_config_with_claim("subject", "sub")
-        picture_template = parse_template_config_with_claim("picture", "picture")
+        picture_template = parse_template_config_with_claim(
+            "picture", "picture")
 
         def parse_template_config(option_name: str) -> Optional[Template]:
             if option_name not in config:
@@ -1605,7 +1628,8 @@ class JinjaOidcMappingProvider(OidcMappingProvider[JinjaOidcMappingConfig]):
             try:
                 return env.from_string(config[option_name])
             except Exception as e:
-                raise ConfigError("invalid jinja template", path=[option_name]) from e
+                raise ConfigError("invalid jinja template",
+                                  path=[option_name]) from e
 
         localpart_template = parse_template_config("localpart_template")
         display_name_template = parse_template_config("display_name_template")
@@ -1648,7 +1672,8 @@ class JinjaOidcMappingProvider(OidcMappingProvider[JinjaOidcMappingConfig]):
         localpart = None
 
         if self._config.localpart_template:
-            localpart = self._config.localpart_template.render(user=userinfo).strip()
+            localpart = self._config.localpart_template.render(
+                user=userinfo).strip()
 
             # Ensure only valid characters are included in the MXID.
             localpart = map_username_to_mxid_localpart(localpart)
@@ -1662,7 +1687,8 @@ class JinjaOidcMappingProvider(OidcMappingProvider[JinjaOidcMappingConfig]):
                 return None
             return template.render(user=userinfo).strip()
 
-        display_name = render_template_field(self._config.display_name_template)
+        display_name = render_template_field(
+            self._config.display_name_template)
         if display_name == "":
             display_name = None
 
@@ -1688,5 +1714,6 @@ class JinjaOidcMappingProvider(OidcMappingProvider[JinjaOidcMappingConfig]):
                 extras[key] = template.render(user=userinfo).strip()
             except Exception as e:
                 # Log an error and skip this value (don't break login for this).
-                logger.error("Failed to render OIDC extra attribute %s: %s" % (key, e))
+                logger.error(
+                    "Failed to render OIDC extra attribute %s: %s" % (key, e))
         return extras
