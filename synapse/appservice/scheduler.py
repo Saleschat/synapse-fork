@@ -103,7 +103,8 @@ class ApplicationServiceScheduler:
         self.store = hs.get_datastores().main
         self.as_api = hs.get_application_service_api()
 
-        self.txn_ctrl = _TransactionController(self.clock, self.store, self.as_api)
+        self.txn_ctrl = _TransactionController(
+            self.clock, self.store, self.as_api)
         self.queuer = _ServiceQueuer(self.txn_ctrl, self.clock, hs)
 
     async def start(self) -> None:
@@ -150,9 +151,11 @@ class ApplicationServiceScheduler:
             return
 
         if events:
-            self.queuer.queued_events.setdefault(appservice.id, []).extend(events)
+            self.queuer.queued_events.setdefault(
+                appservice.id, []).extend(events)
         if ephemeral:
-            self.queuer.queued_ephemeral.setdefault(appservice.id, []).extend(ephemeral)
+            self.queuer.queued_ephemeral.setdefault(
+                appservice.id, []).extend(ephemeral)
         if to_device_messages:
             self.queuer.queued_to_device_messages.setdefault(appservice.id, []).extend(
                 to_device_messages
@@ -184,7 +187,8 @@ class _ServiceQueuer:
         # dict of {service_id: [to_device_message_json]}
         self.queued_to_device_messages: Dict[str, List[JsonDict]] = {}
         # dict of {service_id: [device_list_summary]}
-        self.queued_device_list_summaries: Dict[str, List[DeviceListUpdates]] = {}
+        self.queued_device_list_summaries: Dict[str,
+                                                List[DeviceListUpdates]] = {}
 
         # the appservices which currently have a transaction in flight
         self.requests_in_flight: Set[str] = set()
@@ -216,8 +220,10 @@ class _ServiceQueuer:
                 events = all_events[:MAX_PERSISTENT_EVENTS_PER_TRANSACTION]
                 del all_events[:MAX_PERSISTENT_EVENTS_PER_TRANSACTION]
 
-                all_events_ephemeral = self.queued_ephemeral.get(service.id, [])
-                ephemeral = all_events_ephemeral[:MAX_EPHEMERAL_EVENTS_PER_TRANSACTION]
+                all_events_ephemeral = self.queued_ephemeral.get(
+                    service.id, [])
+                ephemeral = all_events_ephemeral[:
+                                                 MAX_EPHEMERAL_EVENTS_PER_TRANSACTION]
                 del all_events_ephemeral[:MAX_EPHEMERAL_EVENTS_PER_TRANSACTION]
 
                 all_to_device_messages = self.queued_to_device_messages.get(
@@ -488,8 +494,8 @@ class _Recoverer:
         self.clock.call_later(delay, _retry)
 
     def _backoff(self) -> None:
-        # cap the backoff to be around 8.5min => (2^9) = 512 secs
-        if self.backoff_counter < 9:
+        # cap the backoff to be around 1min => (2^6) = 64 secs
+        if self.backoff_counter < 6:
             self.backoff_counter += 1
         self.recover()
 

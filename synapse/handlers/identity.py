@@ -930,7 +930,7 @@ class IdentityHandler:
                 {
                     "org_id": org_id,
                     "mxid": mxid,
-                    "threepids": threepids
+                    "3pids": threepids
                 },
                 headers=headers,
             )

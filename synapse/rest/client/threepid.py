@@ -8,7 +8,7 @@ from synapse.http.server import HttpServer
 from synapse.api.errors import SynapseError
 from synapse.http.client import SimpleHttpClient
 from synapse.http import RequestTimedOutError
-from synapse.api.errors import  Codes
+from synapse.api.errors import Codes
 
 if TYPE_CHECKING:
     from synapse.server import HomeServer
@@ -32,6 +32,11 @@ class ThreepidRestServlet(RestServlet):
         """
         requester = await self.auth.get_user_by_req(request, allow_guest=False)
 
+        if not requester.app_service:
+            raise SynapseError(403,
+                               "Only appservices are allowed to use this route",
+                               Codes.FORBIDDEN)
+
         body = parse_json_object_from_request(request)
 
         self.validate_key(body, "mxid")
@@ -40,18 +45,13 @@ class ThreepidRestServlet(RestServlet):
         if "3pids" not in body or not isinstance(body["3pids"], list) or len(body["3pids"]) == 0:
             raise SynapseError(400, "3pids should be a non-empty list")
 
-        if not requester.app_service:
-            raise SynapseError(403,
-                               "Only appservices are allowed to use this route",
-                               Codes.FORBIDDEN)
-
         threepids = body["3pids"]
         threepids.append({"key": "org_id", "value": body["org_id"]})
         mxid = body["mxid"]
 
         self.hs.get_threepid_sync_scheduler().enqueue_for_threepid_sync(mxid, threepids)
 
-        return 202, {}
+        return 204, {}
 
     @staticmethod
     def validate_key(body: Dict[str, Any], key: str):

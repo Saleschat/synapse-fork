@@ -174,13 +174,15 @@ class LoginRestServlet(RestServlet):
         # fall back to the fallback API if they don't understand one of the
         # login flow types returned.
         if support_login_token_flow:
-            tokenTypeFlow: Dict[str, Any] = {"type": LoginRestServlet.TOKEN_TYPE}
+            tokenTypeFlow: Dict[str, Any] = {
+                "type": LoginRestServlet.TOKEN_TYPE}
             # If the login token flow is enabled advertise the get_login_token flag.
             if self._get_login_token_enabled:
                 tokenTypeFlow["get_login_token"] = True
             flows.append(tokenTypeFlow)
 
-        flows.extend({"type": t} for t in self.auth_handler.get_supported_login_types())
+        flows.extend({"type": t}
+                     for t in self.auth_handler.get_supported_login_types())
 
         flows.append({"type": LoginRestServlet.APPSERVICE_TYPE})
 
@@ -278,7 +280,8 @@ class LoginRestServlet(RestServlet):
         request_info: RequestInfo,
     ) -> LoginResponse:
         identifier = login_submission.get("identifier")
-        logger.info("Got appservice login request with identifier: %r", identifier)
+        logger.info(
+            "Got appservice login request with identifier: %r", identifier)
 
         if not isinstance(identifier, dict):
             raise SynapseError(
@@ -293,7 +296,8 @@ class LoginRestServlet(RestServlet):
 
         user = identifier.get("user")
         if not isinstance(user, str):
-            raise SynapseError(400, "Invalid user in identifier", Codes.INVALID_PARAM)
+            raise SynapseError(
+                400, "Invalid user in identifier", Codes.INVALID_PARAM)
 
         if user.startswith("@"):
             qualified_user_id = user
@@ -301,7 +305,8 @@ class LoginRestServlet(RestServlet):
             qualified_user_id = UserID(user, self.hs.hostname).to_string()
 
         if not appservice.is_interested_in_user(qualified_user_id):
-            raise LoginError(403, "Invalid access_token", errcode=Codes.FORBIDDEN)
+            raise LoginError(403, "Invalid access_token",
+                             errcode=Codes.FORBIDDEN)
 
         return await self._complete_login(
             qualified_user_id,
@@ -398,6 +403,8 @@ class LoginRestServlet(RestServlet):
             Dictionary of account information after successful login.
         """
 
+        logger.info("threepids in _complete_login function")
+        logger.info(threepids)
         # Before we actually log them in we check if they've already logged in
         # too often. This happens here rather than before as we don't
         # necessarily know the user before now.
@@ -417,6 +424,9 @@ class LoginRestServlet(RestServlet):
                     localpart=UserID.from_string(user_id).localpart,
                     default_display_name=default_display_name,
                 )
+
+                logger.info("mxid for the user (canonical_uid)")
+                logger.info(canonical_uid)
 
                 if threepids is not None:
                     (self.hs
@@ -451,7 +461,8 @@ class LoginRestServlet(RestServlet):
                     home_server=self.hs.hostname,
                 )
 
-        initial_display_name = login_submission.get("initial_device_display_name")
+        initial_display_name = login_submission.get(
+            "initial_device_display_name")
         spam_check = await self._spam_checker.check_login_for_spam(
             user_id,
             device_id=device_id,
@@ -556,7 +567,8 @@ class LoginRestServlet(RestServlet):
                 login_submission
             )
         )
-        threepids = self.hs.get_jwt_handler().get_threepids_from_token(login_submission["token"])
+        threepids = self.hs.get_jwt_handler().get_threepids_from_token(
+            login_submission["token"])
 
         return await self._complete_login(
             user_id,
@@ -604,7 +616,8 @@ class RefreshTokenServlet(RestServlet):
         assert_params_in_dict(refresh_submission, ["refresh_token"])
         token = refresh_submission["refresh_token"]
         if not isinstance(token, str):
-            raise SynapseError(400, "Invalid param: refresh_token", Codes.INVALID_PARAM)
+            raise SynapseError(
+                400, "Invalid param: refresh_token", Codes.INVALID_PARAM)
 
         now = self._clock.time_msec()
         access_valid_until_ms = None
@@ -681,7 +694,8 @@ class SsoRedirectServlet(RestServlet):
             return
 
         args: Dict[bytes, List[bytes]] = request.args  # type: ignore
-        client_redirect_url = parse_bytes_from_args(args, "redirectUrl", required=True)
+        client_redirect_url = parse_bytes_from_args(
+            args, "redirectUrl", required=True)
         sso_url = await self._sso_handler.handle_redirect_request(
             request,
             client_redirect_url,
